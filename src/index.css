@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* index.css içine */
+
+.input {
+  @apply px-3 py-2.5 rounded-xl border border-amber-200 bg-white shadow-sm
+         focus:outline-none focus:ring-2 focus:ring-amber-300 
+         dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-600;
+}
+
+body {
+  /* Light: daha kremsi, sıcak bir zemin  */
+  @apply bg-[#fffaf3] text-slate-900 dark:bg-slate-950 dark:text-slate-50;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  @apply text-[19px] font-normal;
+}
+h1, h2, h3 {
+  @apply font-semibold;
+}
+
+strong, .font-medium {
+  @apply font-semibold; /* Medium → SemiBold */
+}
