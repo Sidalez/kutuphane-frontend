@@ -21,7 +21,7 @@ import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import { useAuth } from "../auth/AuthContext";
 import type { BookStatus } from "../types/book";
-import { api } from "../apiClient";
+
 interface AIBookResponse {
   found: boolean;
   message?: string;
@@ -32,6 +32,7 @@ interface AIBookResponse {
   publishedDate?: string;
   description?: string;
   coverImageUrl?: string | null;
+  categories?: string[]; // 🔥 YENİ: AI'den gelecek kategoriler
 }
 
 const toTitleCase = (value: string) =>
@@ -150,13 +151,12 @@ export default function AddBookPage() {
     setSearchInfo(null);
     setSearching(true);
 
-try {
-  const res = await fetch(`${import.meta.env.VITE_API_URL}/api/books/ai`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ isbn: trimmed }),
-  });
-
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/books/ai`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isbn: trimmed }),
+      });
 
       const data: AIBookResponse = await res.json();
 
@@ -181,6 +181,19 @@ try {
       }
       if (data.description) setDescription(data.description);
       if (data.coverImageUrl) setCoverImageUrl(data.coverImageUrl);
+
+      // 🔥 AI'den gelen kategorileri de doldur
+      if (Array.isArray(data.categories) && data.categories.length > 0) {
+        const normalized = data.categories
+          .filter((c): c is string => typeof c === "string" && c.trim() !== "")
+          .map((c) => toTitleCase(c.trim()));
+
+        setCategories((prev) => {
+          const set = new Set(prev);
+          normalized.forEach((c) => set.add(c));
+          return Array.from(set);
+        });
+      }
     } catch (err) {
       console.error("AI ISBN arama hatası:", err);
       setSearchError(
@@ -230,55 +243,54 @@ try {
     setSubmitting(true);
 
     try {
-    await addDoc(collection(db, "books"), {
-  userId: user.uid,
-  title: title.trim(),
-  author: author.trim() || null,
-  publisher: publisher.trim() || null,
+      await addDoc(collection(db, "books"), {
+        userId: user.uid,
+        title: title.trim(),
+        author: author.trim() || null,
+        publisher: publisher.trim() || null,
 
-  // 🔥 Basım yılı veri tabanına yaz
-  publishYear: publishedDate.trim() || null,
+        // 🔥 Basım yılı veri tabanına yaz
+        publishYear: publishedDate.trim() || null,
 
-  isbn: isbn.trim() || null,
-  totalPages:
-    typeof totalPages === "number" && !Number.isNaN(totalPages)
-      ? totalPages
-      : null,
-  coverImageUrl: coverImageUrl.trim() || null,
-  status,
-  pagesRead:
-    typeof pagesRead === "number" && !Number.isNaN(pagesRead)
-      ? pagesRead
-      : 0,
+        isbn: isbn.trim() || null,
+        totalPages:
+          typeof totalPages === "number" && !Number.isNaN(totalPages)
+            ? totalPages
+            : null,
+        coverImageUrl: coverImageUrl.trim() || null,
+        status,
+        pagesRead:
+          typeof pagesRead === "number" && !Number.isNaN(pagesRead)
+            ? pagesRead
+            : 0,
 
-  // Puanlar
-  expectedRating:
-    typeof expectedRating === "number" && !Number.isNaN(expectedRating)
-      ? expectedRating
-      : null,
-  currentRating:
-    typeof progressRating === "number" && !Number.isNaN(progressRating)
-      ? progressRating
-      : null,
-  finalRating:
-    typeof finalRating === "number" && !Number.isNaN(finalRating)
-      ? finalRating
-      : null,
+        // Puanlar
+        expectedRating:
+          typeof expectedRating === "number" && !Number.isNaN(expectedRating)
+            ? expectedRating
+            : null,
+        currentRating:
+          typeof progressRating === "number" && !Number.isNaN(progressRating)
+            ? progressRating
+            : null,
+        finalRating:
+          typeof finalRating === "number" && !Number.isNaN(finalRating)
+            ? finalRating
+            : null,
 
-  overallRating: null,
-  categories,
-  shelf: shelf.trim() || null,
-  startDate: startDate || null,
-  endDate: endDate || null,
-  notes: notes.trim() || null,
+        overallRating: null,
+        categories,
+        shelf: shelf.trim() || null,
+        startDate: startDate || null,
+        endDate: endDate || null,
+        notes: notes.trim() || null,
 
-  // 🔥 Açıklama / özet de DB'ye yazılsın
-  review: description.trim() || null,
+        // 🔥 Açıklama / özet de DB'ye yazılsın
+        review: description.trim() || null,
 
-  createdAt: serverTimestamp(),
-  updatedAt: serverTimestamp(),
-});
-
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
 
       navigate("/library");
     } catch (err) {
