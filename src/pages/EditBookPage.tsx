@@ -727,6 +727,7 @@ const handleDeleteBook = async () => {
   {/* Sağ tarafta Kaydet butonu */}
   <button
     type="submit"
+      onClick={handleSave}
     className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 
                text-white font-semibold shadow-md shadow-amber-500/30 text-sm"
   >
