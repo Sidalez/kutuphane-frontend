@@ -1,17 +1,19 @@
 // src/pages/BookDetailPage.tsx
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   doc,
   getDoc,
+  setDoc,
   updateDoc,
   addDoc,
   collection,
   getDocs,
   query,
   orderBy,
-  deleteDoc,        // ✅ eklendi
+  deleteDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebase";
@@ -27,9 +29,8 @@ import {
   Star,
   X,
   Info,
-  Trash2,          // ✅ eklendi
+  Trash2,
 } from "lucide-react";
-
 
 import type { Book } from "../types/book";
 
@@ -39,7 +40,6 @@ export default function BookDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-
 
   const [book, setBook] = useState<Book | null>(null);
   const [loadingBook, setLoadingBook] = useState(true);
@@ -69,13 +69,12 @@ export default function BookDetailPage() {
 
   // Toast
   const [notification, setNotification] = useState<string | null>(null);
-    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteAlert, setDeleteAlert] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
-
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -134,7 +133,10 @@ export default function BookDetailPage() {
       // ==== notlar ====
       try {
         const notesSnap = await getDocs(
-          query(collection(db, "books", id, "notes"), orderBy("createdAt", "desc"))
+          query(
+            collection(db, "books", id, "notes"),
+            orderBy("createdAt", "desc")
+          )
         );
         setNotes(notesSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
       } catch {
@@ -368,6 +370,14 @@ export default function BookDetailPage() {
 
       setLogs((prev) => [{ id: logRef.id, ...payload }, ...prev]);
 
+      // 🔥 Otomatik oturum varsa Firestore'daki kaydı temizle
+      try {
+        const sessionRef = doc(db, "books", id, "sessions", user.uid);
+        await deleteDoc(sessionRef);
+      } catch (e) {
+        console.error("Aktif oturum temizlenirken hata:", e);
+      }
+
       // Puan modal tetikleri
       if (prevPages === 0 && book.status === "OKUNACAK") {
         setRatingModal("start");
@@ -445,8 +455,7 @@ export default function BookDetailPage() {
     }
   };
 
-
-    /* --------------------------------------------------------------- */
+  /* --------------------------------------------------------------- */
   /*  KİTABI SİL                                                     */
   /* --------------------------------------------------------------- */
   const handleDeleteBook = async () => {
@@ -493,15 +502,9 @@ export default function BookDetailPage() {
     }
   };
 
-
   /* --------------------------------------------------------------- */
   /*  RENDER DURUMLARI                                               */
   /* --------------------------------------------------------------- */
-
-
-
-
-
 
   if (loadingBook) {
     return (
@@ -770,8 +773,7 @@ export default function BookDetailPage() {
           </div>
         </section>
 
-   
-           {/* SEKME BAR + SİL BUTONU */}
+        {/* SEKME BAR + SİL BUTONU */}
         <div className="flex justify-between items-center gap-3">
           <div className="inline-flex gap-2 p-1 rounded-full bg-white border border-amber-100 shadow-sm dark:bg-slate-900 dark:border-slate-700">
             <button
@@ -817,7 +819,6 @@ export default function BookDetailPage() {
           </button>
         </div>
 
-
         {/* TAB İÇERİKLERİ */}
         {activeTab === "logs" ? (
           <LogsTab
@@ -837,6 +838,8 @@ export default function BookDetailPage() {
             onAddLog={handleAddLog}
             onStartReading={handleStartReading}
             lastReadPage={lastReadPage}
+            bookId={id!}
+            userId={user!.uid}
           />
         ) : (
           <NotesTab
@@ -850,7 +853,7 @@ export default function BookDetailPage() {
           />
         )}
       </div>
-  {/* KİTAP SİLME MODALİ */}
+      {/* KİTAP SİLME MODALİ */}
       <BookDeleteModal
         open={deleteModalOpen}
         onClose={() => {
@@ -933,8 +936,6 @@ export default function BookDetailPage() {
           </div>
         </div>
       )}
-
-      
     </>
   );
 }
@@ -958,6 +959,8 @@ interface LogsTabProps {
   onAddLog: () => void;
   onStartReading: () => void;
   lastReadPage: number | null;
+  bookId: string;
+  userId: string;
 }
 
 function LogsTab({
@@ -977,8 +980,25 @@ function LogsTab({
   onAddLog,
   onStartReading,
   lastReadPage,
+  bookId,
+  userId,
 }: LogsTabProps) {
-  // Varsayılan tarih & başlangıç sayfası
+  const [mode, setMode] = useState<"manual" | "auto">("manual");
+  const [timerStartMs, setTimerStartMs] = useState<number | null>(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+
+  // 🔥 Yeni: otomatik oturumun başlangıç sayfasını ve yüklenme durumunu tut
+  const [autoStartPage, setAutoStartPage] = useState<number | null>(null);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
+
+  // 🔥 Firestore'daki aktif oturum dokümanı (sessions koleksiyonu)
+  const sessionDocRef = useMemo(
+    () =>
+      bookId && userId ? doc(db, "books", bookId, "sessions", userId) : null,
+    [bookId, userId]
+  );
+
   useEffect(() => {
     if (bookStatus !== "OKUNUYOR") return;
 
@@ -1000,13 +1020,238 @@ function LogsTab({
     setLogStartPage,
   ]);
 
+  // 🔥 Sayfa açıldığında Firestore'dan aktif oturumu oku
+  useEffect(() => {
+    if (!sessionDocRef) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const snap = await getDoc(sessionDocRef);
+        if (!snap.exists()) return;
+        const data: any = snap.data();
+
+        // Bitmiş oturumu önemsemiyoruz
+        if (data.endedAt || typeof data.startAtMs !== "number") return;
+        if (cancelled) return;
+
+        const startMs: number = data.startAtMs;
+        const startDate = new Date(startMs);
+
+        const dateStr = startDate.toISOString().slice(0, 10);
+        const hh = String(startDate.getHours()).padStart(2, "0");
+        const mm = String(startDate.getMinutes()).padStart(2, "0");
+
+        setMode("auto");
+        setTimerStartMs(startMs);
+        setElapsedMs(Date.now() - startMs);
+        setIsRunning(true);
+
+        // Tarih & saat alanlarını tekrar doldur
+        setLogDate((prev) => prev || dateStr);
+        setLogStartTime(`${hh}:${mm}`);
+
+        const startPageNumber =
+          typeof data.startPage === "number" && !Number.isNaN(data.startPage)
+            ? data.startPage
+            : null;
+
+        if (startPageNumber && startPageNumber > 0) {
+          setLogStartPage(String(startPageNumber));
+          setAutoStartPage(startPageNumber);
+        }
+      } finally {
+        if (!cancelled) setSessionLoaded(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionDocRef, setLogDate, setLogStartTime, setLogStartPage]);
+
+  // Kayıt modu değişince kronometreyi sıfırla
+  useEffect(() => {
+    if (mode === "manual") {
+      setIsRunning(false);
+      setTimerStartMs(null);
+      setElapsedMs(0);
+    }
+  }, [mode]);
+
+  // Kitap "OKUNUYOR" değilse kronometreyi kapat
+  useEffect(() => {
+    if (bookStatus !== "OKUNUYOR") {
+      setIsRunning(false);
+      setTimerStartMs(null);
+      setElapsedMs(0);
+      setMode("manual");
+    }
+  }, [bookStatus]);
+
+  // Kronometre tick
+  useEffect(() => {
+    if (!isRunning || !timerStartMs) return;
+
+    const id = setInterval(() => {
+      setElapsedMs(Date.now() - timerStartMs);
+    }, 1000);
+
+    return () => clearInterval(id);
+  }, [isRunning, timerStartMs]);
+  const handleResetAutoSession = async () => {
+    // Firestore'daki session'ı tamamen sil
+    if (sessionDocRef) {
+      try {
+        await deleteDoc(sessionDocRef);
+      } catch (e) {
+        console.error("Oturum sıfırlanırken hata:", e);
+      }
+    }
+
+    // Lokal state'i temizle
+    setIsRunning(false);
+    setTimerStartMs(null);
+    setElapsedMs(0);
+    setLogStartTime("");
+    setLogEndTime("");
+    setLogStartPage("");
+    setLogEndPage("");
+    setAutoStartPage(null);
+  };
+
+  const formatElapsed = (ms: number) => {
+    const totalSec = Math.floor(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+
+    if (h > 0) {
+      return `${h} sa ${m.toString().padStart(2, "0")} dk`;
+    }
+    return `${m.toString().padStart(2, "0")} dk ${s
+      .toString()
+      .padStart(2, "0")} sn`;
+  };
+
+  const handleStartAutoSession = async () => {
+    if (!sessionDocRef || isRunning) return;
+
+    const now = new Date();
+    const nowMs = now.getTime();
+    const today = now.toISOString().slice(0, 10);
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+
+    // Tarih yoksa bugünü yaz
+    if (!logDate) {
+      setLogDate(today);
+    }
+
+    // Başlangıç saati her zaman şu an
+    setLogStartTime(`${hh}:${mm}`);
+    setLogEndTime("");
+
+    // Başlangıç sayfasını string'ten sayıya çevir
+    const parsed = parseInt(logStartPage || "", 10);
+    const startPageNumber = !Number.isNaN(parsed)
+      ? parsed
+      : lastReadPage && lastReadPage > 0
+      ? lastReadPage
+      : 0;
+
+    // 🔥 Firestore'a aktif oturumu yaz
+    await setDoc(sessionDocRef, {
+      bookId,
+      userId,
+      startPage: startPageNumber,
+      startAt: serverTimestamp(),
+      startAtMs: nowMs, // timer için direkt milisaniye
+      endedAt: null,
+      createdAt: serverTimestamp(),
+    });
+
+    setMode("auto");
+    setTimerStartMs(nowMs);
+    setElapsedMs(0);
+    setIsRunning(true);
+    setAutoStartPage(startPageNumber);
+  };
+
+
+  // 🔸 OTOMATİK MOD: Bitiş saatini de sistemden al
+  const handleStopAutoSession = async () => {
+    // Çalışmıyorsa veya başlangıç zamanı yoksa hiçbir şey yapma
+    if (!isRunning || !timerStartMs) return;
+
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+
+    // Bitiş saatini form alanına yaz
+    const endTimeStr = `${hh}:${mm}`;
+    setLogEndTime(endTimeStr);
+
+    // Geçen süreyi hesapla (ms cinsinden)
+    const elapsed = now.getTime() - timerStartMs;
+    setElapsedMs(elapsed);
+
+    // Timer’ı durdur (artık saymayı bıraksın)
+    setIsRunning(false);
+
+    // 🔥 Firestore'daki oturumu "bitti" olarak işaretle
+    if (sessionDocRef) {
+      try {
+        await updateDoc(sessionDocRef, {
+          endedAt: serverTimestamp(),
+          endAtMs: now.getTime(),
+        });
+      } catch (e) {
+        console.error("Oturum bitirme güncellenirken hata:", e);
+      }
+    }
+  };
+
+
   return (
     <div className="space-y-4">
       {/* Form kartı */}
       <div className="rounded-3xl border border-amber-100 bg-white shadow-[0_12px_35px_rgba(0,0,0,0.06)] dark:bg-slate-950 dark:border-slate-800 p-5 md:p-6">
-        <h2 className="text-base md:text-lg font-semibold text-amber-700 mb-4">
-          Yeni Okuma Kaydı Ekle
-        </h2>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h2 className="text-base md:text-lg font-semibold text-amber-700">
+            Yeni Okuma Kaydı Ekle
+          </h2>
+
+          {/* 🔸 Kayıt modu seçimi */}
+          <div className="inline-flex items-center gap-1 rounded-full bg-slate-100/80 dark:bg-slate-900 px-1 py-0.5 text-[11px]">
+            <span className="px-2 text-slate-500 dark:text-slate-400">
+              Kayıt modu:
+            </span>
+            <button
+              type="button"
+              onClick={() => setMode("manual")}
+              className={`px-2.5 py-1 rounded-full font-medium ${
+                mode === "manual"
+                  ? "bg-white dark:bg-slate-800 text-amber-700 shadow"
+                  : "text-slate-600 dark:text-slate-300 hover:bg-white/40 dark:hover:bg-slate-800/80"
+              }`}
+            >
+              Manuel
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("auto")}
+              className={`px-2.5 py-1 rounded-full font-medium ${
+                mode === "auto"
+                  ? "bg-white dark:bg-slate-800 text-amber-700 shadow"
+                  : "text-slate-600 dark:text-slate-300 hover:bg-white/40 dark:hover:bg-slate-800/80"
+              }`}
+            >
+              Otomatik
+            </button>
+          </div>
+        </div>
 
         {bookStatus === "OKUNACAK" && (
           <div className="rounded-2xl border border-amber-100 bg-amber-50/50 px-4 py-3 text-sm text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300">
@@ -1034,6 +1279,7 @@ function LogsTab({
 
         {bookStatus === "OKUNUYOR" && (
           <>
+            {/* Tarih & saat satırı */}
             <div className="mt-1 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div className="flex flex-col gap-1">
@@ -1050,31 +1296,119 @@ function LogsTab({
 
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-slate-600">
-                    Başlangıç Saati
+                    Başlangıç Saati{" "}
+                    {mode === "auto" && (
+                      <span className="ml-1 text-[10px] text-slate-400">
+                        (otomatik alınır)
+                      </span>
+                    )}
                   </label>
                   <input
                     type="time"
                     value={logStartTime}
                     onChange={(e) => setLogStartTime(e.target.value)}
-                    className="px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40"
+                    disabled={mode === "auto"} // 🔥 Auto modda kullanıcı seçemiyor
+                    className="px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 disabled:bg-slate-100 disabled:text-slate-400 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40 disabled:dark:bg-slate-800 disabled:dark:text-slate-500"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-slate-600">
-                    Bitiş Saati
+                    Bitiş Saati{" "}
+                    {mode === "auto" && (
+                      <span className="ml-1 text-[10px] text-slate-400">
+                        (Bitir’e basınca)
+                      </span>
+                    )}
                   </label>
                   <input
                     type="time"
                     value={logEndTime}
                     onChange={(e) => setLogEndTime(e.target.value)}
-                    className="px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40"
+                    disabled={mode === "auto"}
+                    className="px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 disabled:bg-slate-100 disabled:text-slate-400 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40 disabled:dark:bg-slate-800 disabled:dark:text-slate-500"
                   />
                 </div>
 
-                <div className="hidden md:block" />
+                {/* Kronometre alanı (sadece otomatik modda) */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-slate-600">
+                    Kronometre
+                  </label>
+                  {mode === "auto" ? (
+                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-amber-200 bg-amber-50/60 text-xs text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200">
+                      <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center dark:bg-slate-800">
+                        <Clock className="w-4 h-4 text-amber-600 dark:text-amber-300" />
+                      </div>
+                      <div className="flex-1">
+                        {isRunning ? (
+                          <>
+                            <div className="text-[11px] text-slate-500">
+                              Süre işliyor...
+                            </div>
+                            <div className="text-sm font-semibold">
+                              {formatElapsed(elapsedMs)}
+                            </div>
+                          </>
+                        ) : logEndTime ? (
+                          <>
+                            <div className="text-[11px] text-slate-500">
+                              Oturum süresi
+                            </div>
+                            <div className="text-sm font-semibold">
+                              {elapsedMs > 0
+                                ? formatElapsed(elapsedMs)
+                                : "Kaydedildi"}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-[11px] text-slate-500">
+                            Başlat’a bastığında başlangıç saati ve süre otomatik
+                            alınır. Bitir dediğinde bitiş saati yazılır.
+                          </div>
+                        )}
+                      </div>
+                                       {isRunning ? (
+                        <button
+                          type="button"
+                          onClick={handleStopAutoSession}
+                          className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-[11px] font-semibold shadow hover:bg-red-600"
+                        >
+                          Durdur
+                        </button>
+                      ) : (
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={handleStartAutoSession}
+                            className="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-[11px] font-semibold shadow hover:bg-amber-600"
+                          >
+                            Başlat
+                          </button>
+
+                          {(timerStartMs || elapsedMs > 0) && (
+                            <button
+                              type="button"
+                              onClick={handleResetAutoSession}
+                              className="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-[11px] font-semibold shadow hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                            >
+                              Sıfırla
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                    </div>
+                  ) : (
+                    <div className="px-3 py-2.5 rounded-xl border border-slate-200 text-[11px] text-slate-500 bg-slate-50 dark:bg-slate-900 dark:border-slate-700">
+                      Otomatik süre takibi için yukarıdan{" "}
+                      <strong>Otomatik</strong> modunu seç.
+                    </div>
+                  )}
+                </div>
               </div>
 
+              {/* Sayfa satırları */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-slate-600">
@@ -1172,7 +1506,6 @@ function LogsTab({
             </span>
           </div>
           <div className="p-3 md:p-4 space-y-3">
-            {/* Sütun başlıkları */}
             <div className="hidden md:grid grid-cols-[minmax(0,2.4fr)_minmax(0,1.2fr)] px-1 pb-2 text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
               <span>Tarih &amp; Saat</span>
               <span className="text-right">Sayfa &amp; Okunan</span>
@@ -1183,14 +1516,11 @@ function LogsTab({
               return (
                 <div
                   key={log.id}
-                  className={`
-                    rounded-2xl border px-3 py-3 md:px-4 md:py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-2
-                    ${
-                      isLast
-                        ? "bg-amber-50/80 border-amber-200 dark:bg-slate-900/70 dark:border-amber-500/40"
-                        : "bg-white border-amber-100 dark:bg-slate-900/60 dark:border-slate-800"
-                    }
-                  `}
+                  className={`rounded-2xl border px-3 py-3 md:px-4 md:py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-2 ${
+                    isLast
+                      ? "bg-amber-50/80 border-amber-200 dark:bg-slate-900/70 dark:border-amber-500/40"
+                      : "bg-white border-amber-100 dark:bg-slate-900/60 dark:border-slate-800"
+                  }`}
                 >
                   <div className="flex items-start gap-3 md:w-2/3">
                     <div className="mt-1">
