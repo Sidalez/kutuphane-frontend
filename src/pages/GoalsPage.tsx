@@ -14,12 +14,7 @@ import { db } from "../firebase/firebase";
 import { useAuth } from "../auth/AuthContext";
 import type { Book } from "../types/book";
 
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 import {
   Target,
@@ -69,6 +64,14 @@ interface GoalWithStats extends Goal {
   paceText?: string;
 }
 
+// 🔥 Okuma logları için basit tip
+interface FlatLog {
+  id: string;
+  bookId: string;
+  date: string; // "YYYY-MM-DD"
+  pagesRead: number;
+}
+
 const PIE_COLORS = ["#10b981", "#f43f5e"];
 
 export default function GoalsPage() {
@@ -77,6 +80,7 @@ export default function GoalsPage() {
   const [loading, setLoading] = useState(true);
   const [books, setBooks] = useState<Book[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [logs, setLogs] = useState<FlatLog[]>([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -86,6 +90,11 @@ export default function GoalsPage() {
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  // --- Silme modalı ---
+const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+const [deleting, setDeleting] = useState(false);
+
 
   const showToast = (type: "success" | "error", message: string) => {
     setToast({ type, message });
@@ -121,36 +130,36 @@ export default function GoalsPage() {
   });
 
   const handlePeriodChange = (p: GoalPeriod) => {
-  setNewGoal((prev) => {
-    const base = prev.startDate || todayStr;
-    const start = new Date(base);
-    const end = new Date(start);
+    setNewGoal((prev) => {
+      const base = prev.startDate || todayStr;
+      const start = new Date(base);
+      const end = new Date(start);
 
-    if (p === "daily") {
-      // Aynı gün
-      end.setDate(start.getDate());
-    } else if (p === "weekly") {
-      // 7 günlük aralık
-      end.setDate(start.getDate() + 6);
-    } else if (p === "monthly") {
-      // 1 ay sonrası (yaklaşık)
-      end.setMonth(start.getMonth() + 1);
-      end.setDate(end.getDate() - 1);
-    } else if (p === "yearly") {
-      // 1 yıl sonrası
-      end.setFullYear(start.getFullYear() + 1);
-      end.setDate(end.getDate() - 1);
-    }
+      if (p === "daily") {
+        // Aynı gün
+        end.setDate(start.getDate());
+      } else if (p === "weekly") {
+        // 7 günlük aralık
+        end.setDate(start.getDate() + 6);
+      } else if (p === "monthly") {
+        // 1 ay sonrası (yaklaşık)
+        end.setMonth(start.getMonth() + 1);
+        end.setDate(end.getDate() - 1);
+      } else if (p === "yearly") {
+        // 1 yıl sonrası
+        end.setFullYear(start.getFullYear() + 1);
+        end.setDate(end.getDate() - 1);
+      }
 
-    const endStr = end.toISOString().slice(0, 10);
+      const endStr = end.toISOString().slice(0, 10);
 
-    return {
-      ...prev,
-      periodType: p,
-      endDate: endStr,
-    };
-  });
-};
+      return {
+        ...prev,
+        periodType: p,
+        endDate: endStr,
+      };
+    });
+  };
 
   // ---- VERİ ÇEKME ----
   useEffect(() => {
@@ -169,6 +178,44 @@ export default function GoalsPage() {
           (d) => ({ ...d.data(), id: d.id } as Book)
         );
         setBooks(booksData);
+
+        // 🔥 Tüm kitapların logs alt koleksiyonlarını çek
+        const allLogs: FlatLog[] = [];
+        await Promise.all(
+          booksSnap.docs.map(async (bookDoc) => {
+            const bookId = bookDoc.id;
+            const logsSnap = await getDocs(
+              collection(db, "books", bookId, "logs")
+            );
+            logsSnap.forEach((ldoc) => {
+              const data = ldoc.data() as any;
+              const dateStr: string =
+                typeof data.date === "string"
+                  ? data.date
+                  : new Date().toISOString().slice(0, 10);
+
+              let pages = 0;
+              if (typeof data.pagesRead === "number") {
+                pages = data.pagesRead;
+              } else if (
+                typeof data.startPage === "number" &&
+                typeof data.endPage === "number"
+              ) {
+                pages = Math.max(0, data.endPage - data.startPage);
+              }
+
+              if (!pages || pages <= 0) return;
+
+              allLogs.push({
+                id: ldoc.id,
+                bookId,
+                date: dateStr,
+                pagesRead: pages,
+              });
+            });
+          })
+        );
+        setLogs(allLogs);
 
         // hedefler: users/{uid}/goals
         const qGoals = query(collection(db, "users", user.uid, "goals"));
@@ -209,23 +256,37 @@ export default function GoalsPage() {
       const end = new Date(goal.endDate).getTime();
       const now = new Date().getTime();
 
+      const goalBookIds = goal.bookIds ?? [];
+
+      // 🔥 Bu hedefe ait logları filtrele (tarih ve kitap bazlı)
+      const goalLogs = logs.filter((l) => {
+        if (!l.date) return false;
+        const t = new Date(l.date).getTime();
+        if (Number.isNaN(t)) return false;
+        if (t < start || t > end) return false;
+
+        if (goalBookIds.length > 0) {
+          return goalBookIds.includes(l.bookId);
+        }
+        return true;
+      });
+
       let current = 0;
 
-      // hedefe ilerleme
-      if (goal.type === "book") {
-        current = books.filter((b) => {
-          if (b.status !== "OKUNDU" || !b.endDate) return false;
-          const t = new Date(b.endDate).getTime();
-          return t >= start && t <= end;
-        }).length;
+      if (goal.type === "page") {
+        // 📌 Sayfa hedefi: tarih aralığındaki log'lardan gelen sayfaları topla
+        current = goalLogs.reduce((sum, l) => sum + (l.pagesRead || 0), 0);
       } else {
-        current = books
-          .filter((b) => {
-            if (b.status !== "OKUNDU" || !b.endDate) return false;
-            const t = new Date(b.endDate).getTime();
-            return t >= start && t <= end;
-          })
-          .reduce((sum, b) => sum + (b.totalPages || 0), 0);
+        // 📌 Kitap hedefi: bitmiş kitap sayısı
+        const relevantBooks = books.filter((b) => {
+          if (goalBookIds.length > 0 && !goalBookIds.includes(b.id)) {
+            return false;
+          }
+          if ((b as any).status !== "OKUNDU" || !(b as any).endDate) return false;
+          const t = new Date((b as any).endDate as string).getTime();
+          return t >= start && t <= end;
+        });
+        current = relevantBooks.length;
       }
 
       const percent =
@@ -257,7 +318,7 @@ export default function GoalsPage() {
         else if (percent >= timePercent) risk = "good";
       }
 
-      // Pace hesaplama (istatistikle bağlantı gibi)
+      // Pace hesaplama
       let paceText = "";
       const totalDays =
         totalDuration > 0 ? Math.max(1, Math.round(totalDuration / dayMs)) : 0;
@@ -316,7 +377,7 @@ export default function GoalsPage() {
         paceText,
       };
     });
-  }, [goals, books, user]);
+  }, [goals, books, logs, user]);
 
   // ---- GENEL ÖZET + AI yorum bloğu ----
   const overview = useMemo(() => {
@@ -357,8 +418,18 @@ export default function GoalsPage() {
       }
     }
 
-    return { completed, failed, active, total, successRate, ahead, behind, aiSummary };
+    return {
+      completed,
+      failed,
+      active,
+      total,
+      successRate,
+      ahead,
+      behind,
+      aiSummary,
+    };
   }, [goalStats]);
+
   // --- "AI" TARZI ÖNERİLER ---
   const aiSuggestions = useMemo(() => {
     if (!goalStats.length) return [];
@@ -370,7 +441,6 @@ export default function GoalsPage() {
     }[] = [];
 
     const today = new Date();
-    const todayStr = today.toISOString().slice(0, 10);
 
     // 1) Genel başarı durumu
     if (overview.total > 0) {
@@ -378,32 +448,39 @@ export default function GoalsPage() {
         suggestions.push({
           type: "success",
           title: "Genel Başarı Yüksek 🎉",
-          body: `Hedeflerinin %${overview.successRate} kadarını başarıyla tamamlamışsın. Bu tempoyu korursan uzun vadede okuma alışkanlığın çok sağlam bir çizgide kalır.`
+          body: `Hedeflerinin %${overview.successRate} kadarını başarıyla tamamlamışsın. Bu tempoyu korursan uzun vadede okuma alışkanlığın çok sağlam bir çizgide kalır.`,
         });
-      } else if (overview.successRate <= 40 && (overview.completed + overview.failed) > 0) {
+      } else if (
+        overview.successRate <= 40 &&
+        overview.completed + overview.failed > 0
+      ) {
         suggestions.push({
           type: "risk",
           title: "Başarı Oranı Düşük Görünüyor",
-          body: `Şu an için hedeflerde başarı oranı %${overview.successRate} seviyesinde. Belki hedeflerini biraz daha küçük parçalara bölmek (örneğin aylık yerine haftalık hedefler) motivasyonunu artırabilir.`
+          body: `Şu an için hedeflerde başarı oranı %${overview.successRate} seviyesinde. Belki hedeflerini biraz daha küçük parçalara bölmek (örneğin aylık yerine haftalık hedefler) motivasyonunu artırabilir.`,
         });
       } else {
         suggestions.push({
           type: "info",
           title: "Denge Fena Değil",
-          body: `Tamamlanan ve kaçan hedeflerin dengede. Hedef sayısını çok arttırmadan, şu anki seviyeyi stabil tutmaya odaklanmak iyi olabilir.`
+          body: `Tamamlanan ve kaçan hedeflerin dengede. Hedef sayısını çok arttırmadan, şu anki seviyeyi stabil tutmaya odaklanmak iyi olabilir.`,
         });
       }
     }
 
-    // 2) En riskli aktif hedef (zaman ilerlemiş, ilerleme geride kalmış)
+    // 2) En riskli aktif hedef
     const activeGoals = goalStats.filter((g) => g.computedStatus === "active");
     if (activeGoals.length) {
       const risky = [...activeGoals]
-        .filter((g) => g.timePercent > g.percent + 10) // Zaman, ilerlemeden en az %10 önde
-        .sort((a, b) => (b.timePercent - b.percent) - (a.timePercent - a.percent))[0];
+        .filter((g) => g.timePercent > g.percent + 10)
+        .sort(
+          (a, b) =>
+            b.timePercent -
+            b.percent -
+            (a.timePercent - a.percent)
+        )[0];
 
       if (risky) {
-        // Kalan gün & kalan hedef hesabı
         const end = new Date(risky.endDate);
         const diffDays = Math.ceil(
           (end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
@@ -433,7 +510,7 @@ export default function GoalsPage() {
           title: `Riskli Hedef: ${risky.title}`,
           body:
             `Zamanın %${risky.timePercent}’i geçti ama hedefte %${risky.percent} seviyesindesin. ` +
-            detail
+            detail,
         });
       }
     }
@@ -447,7 +524,7 @@ export default function GoalsPage() {
       suggestions.push({
         type: "success",
         title: `Öne Geçtiğin Hedef: ${good.title}`,
-        body: `Bu hedefte zaman çizelgesinin önündesin (ilerleme %${good.percent}, zaman %${good.timePercent}). Bu ritmi diğer hedeflere de yayarsan genel başarı oranını hızlıca yukarı çekebilirsin.`
+        body: `Bu hedefte zaman çizelgesinin önündesin (ilerleme %${good.percent}, zaman %${good.timePercent}). Bu ritmi diğer hedeflere de yayarsan genel başarı oranını hızlıca yukarı çekebilirsin.`,
       });
     }
 
@@ -456,7 +533,7 @@ export default function GoalsPage() {
       suggestions.push({
         type: "info",
         title: "Henüz Hedef Oluşturmadın",
-        body: "Başlamak için küçük bir “haftalık 100 sayfa” veya “bu ay 1 kitap” hedefi belirleyebilirsin. Küçük, ulaşılabilir hedefler en istikrarlı okuma alışkanlığını getirir."
+        body: "Başlamak için küçük bir “haftalık 100 sayfa” veya “bu ay 1 kitap” hedefi belirleyebilirsin. Küçük, ulaşılabilir hedefler en istikrarlı okuma alışkanlığını getirir.",
       });
     }
 
@@ -525,19 +602,23 @@ export default function GoalsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!user) return;
-    if (!confirm("Bu hedefi silmek istediğine emin misin?")) return;
+ const handleDelete = async () => {
+  if (!user || !deleteTarget) return;
 
-    try {
-      await deleteDoc(doc(db, "users", user.uid, "goals", id));
-      setGoals((prev) => prev.filter((g) => g.id !== id));
-      showToast("success", "Hedef silindi.");
-    } catch (err) {
-      console.error(err);
-      showToast("error", "Hedef silinirken bir hata oluştu.");
-    }
-  };
+  setDeleting(true);
+  try {
+    await deleteDoc(doc(db, "users", user.uid, "goals", deleteTarget));
+    setGoals((prev) => prev.filter((g) => g.id !== deleteTarget));
+    setDeleteTarget(null);
+    showToast("success", "Hedef silindi.");
+  } catch (err) {
+    console.error(err);
+    showToast("error", "Hedef silinirken bir hata oluştu.");
+  } finally {
+    setDeleting(false);
+  }
+};
+
 
   if (loading) {
     return (
@@ -702,6 +783,7 @@ export default function GoalsPage() {
           </p>
         </div>
       </div>
+
       {/* --- AI TARZI ÖNERİ PANELİ --- */}
       {aiSuggestions.length > 0 && (
         <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm px-5 py-4 flex flex-col gap-3">
@@ -714,7 +796,8 @@ export default function GoalsPage() {
                 Akıllı Öneriler
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Hedeflerin, süreler ve gerçekleşen performansa göre otomatik yorumlar.
+                Hedeflerin, süreler ve gerçekleşen performansa göre otomatik
+                yorumlar.
               </p>
             </div>
           </div>
@@ -755,158 +838,205 @@ export default function GoalsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {goalStats.map((goal) => (
-            <div
-              key={goal.id}
-              className={`relative p-6 rounded-3xl border transition-all group ${
-                goal.computedStatus === "active"
-                  ? "bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md"
-                  : "bg-slate-50 dark:bg-slate-900/60 border-slate-100 dark:border-slate-800 opacity-80 hover:opacity-100"
-              }`}
-            >
-              {/* Header */}
-              <div className="flex justify-between items-start mb-4 gap-3">
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`p-3 rounded-2xl ${
-                      goal.computedStatus === "completed"
-                        ? "bg-emerald-100 text-emerald-600"
-                        : goal.computedStatus === "failed"
-                        ? "bg-rose-100 text-rose-600"
-                        : "bg-blue-50 text-blue-600"
-                    }`}
-                  >
-                    {goal.computedStatus === "completed" ? (
-                      <Trophy className="w-6 h-6" />
-                    ) : (
-                      <Target className="w-6 h-6" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base md:text-lg">
-                      {goal.title}
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                      <span className="inline-flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(goal.startDate).toLocaleDateString("tr-TR")}{" "}
-                        - {new Date(goal.endDate).toLocaleDateString("tr-TR")}
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800">
-                        {goal.type === "book" ? "Kitap hedefi" : "Sayfa hedefi"}
-                      </span>
-                      {goal.periodType && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-50 dark:bg-slate-900">
-                          <Clock className="w-3 h-3" />
-                          {goal.periodType === "daily"
-                            ? "Günlük"
-                            : goal.periodType === "weekly"
-                            ? "Haftalık"
-                            : goal.periodType === "monthly"
-                            ? "Aylık"
-                            : "Yıllık"}
+          {goalStats.map((goal) => {
+            const goalBookIds = goal.bookIds ?? [];
+            const linkedBooks =
+              goalBookIds.length > 0
+                ? books.filter((b) => goalBookIds.includes(b.id))
+                : [];
+
+            const cardColorClasses =
+              goal.computedStatus !== "active"
+                ? "bg-slate-50 dark:bg-slate-900/60 border-slate-100 dark:border-slate-800 opacity-80 hover:opacity-100"
+                : goal.risk === "high"
+                ? "bg-rose-50/80 border-rose-200 dark:bg-rose-950/40 dark:border-rose-800"
+                : goal.risk === "good"
+                ? "bg-emerald-50/80 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800"
+                : "bg-amber-50/80 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800";
+
+            return (
+              <div
+                key={goal.id}
+                className={`relative p-6 rounded-3xl border transition-all group shadow-sm hover:shadow-md ${cardColorClasses}`}
+              >
+                {/* Header */}
+                <div className="flex justify-between items-start mb-4 gap-3">
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`p-3 rounded-2xl ${
+                        goal.computedStatus === "completed"
+                          ? "bg-emerald-100 text-emerald-600"
+                          : goal.computedStatus === "failed"
+                          ? "bg-rose-100 text-rose-600"
+                          : "bg-blue-50 text-blue-600"
+                      }`}
+                    >
+                      {goal.computedStatus === "completed" ? (
+                        <Trophy className="w-6 h-6" />
+                      ) : (
+                        <Target className="w-6 h-6" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base md:text-lg">
+                        {goal.title}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(
+                            goal.startDate
+                          ).toLocaleDateString("tr-TR")}{" "}
+                          -{" "}
+                          {new Date(goal.endDate).toLocaleDateString("tr-TR")}
                         </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800">
+                          {goal.type === "book"
+                            ? "Kitap hedefi"
+                            : "Sayfa hedefi"}
+                        </span>
+                        {goal.periodType && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-50 dark:bg-slate-900">
+                            <Clock className="w-3 h-3" />
+                            {goal.periodType === "daily"
+                              ? "Günlük"
+                              : goal.periodType === "weekly"
+                              ? "Haftalık"
+                              : goal.periodType === "monthly"
+                              ? "Aylık"
+                              : "Yıllık"}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* 🔥 İlgili kitaplar (kapak + isim) */}
+                      {linkedBooks.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2 items-center">
+                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                            <BookOpen className="w-3 h-3" />
+                            İlgili kitaplar:
+                          </span>
+                          {linkedBooks.map((b) => (
+                            <div
+                              key={b.id}
+                              className="flex items-center gap-2 px-2 py-1 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/70 dark:border-slate-700/70"
+                            >
+                              <div className="w-7 h-10 rounded-md overflow-hidden bg-slate-200">
+                                {b.coverImageUrl && (
+                                  <img
+                                    src={b.coverImageUrl}
+                                    alt={b.title}
+                                    className="w-full h-full object-cover"
+                                  />
+                                )}
+                              </div>
+                              <span className="text-[11px] font-medium text-slate-700 dark:text-slate-200">
+                                {b.title}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
                   </div>
-                </div>
 
-                <div
-                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
-                    goal.computedStatus === "completed"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : goal.computedStatus === "failed"
-                      ? "bg-rose-100 text-rose-700"
-                      : goal.risk === "high"
-                      ? "bg-red-100 text-red-600 animate-pulse"
-                      : goal.risk === "good"
-                      ? "bg-emerald-50 text-emerald-600"
-                      : "bg-blue-50 text-blue-600"
-                  }`}
-                >
-                  {goal.computedStatus === "completed"
-                    ? "BAŞARILDI"
-                    : goal.computedStatus === "failed"
-                    ? "BAŞARISIZ"
-                    : goal.risk === "high"
-                    ? "RİSKLİ"
-                    : goal.risk === "good"
-                    ? "İYİ GİDİYOR"
-                    : "AKTİF"}
-                </div>
-              </div>
-
-              {/* Progress */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs md:text-sm font-medium text-slate-600 dark:text-slate-300">
-                  <span>
-                    {goal.current} / {goal.targetCount}{" "}
-                    {goal.type === "book" ? "kitap" : "sayfa"}
-                  </span>
-                  <span>%{goal.percent}</span>
-                </div>
-                <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative">
-                  {goal.computedStatus === "active" && (
-                    <div
-                      className="absolute top-0 left-0 h-full bg-slate-200 dark:bg-slate-700 opacity-60 border-r border-slate-400/80"
-                      style={{ width: `${goal.timePercent}%` }}
-                    />
-                  )}
                   <div
-                    className={`h-full rounded-full transition-all duration-700 ${
+                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
                       goal.computedStatus === "completed"
-                        ? "bg-emerald-500"
+                        ? "bg-emerald-100 text-emerald-700"
                         : goal.computedStatus === "failed"
-                        ? "bg-rose-500"
+                        ? "bg-rose-100 text-rose-700"
                         : goal.risk === "high"
-                        ? "bg-red-500"
-                        : "bg-blue-500"
+                        ? "bg-red-100 text-red-600 animate-pulse"
+                        : goal.risk === "good"
+                        ? "bg-emerald-50 text-emerald-600"
+                        : "bg-blue-50 text-blue-600"
                     }`}
-                    style={{ width: `${goal.percent}%` }}
-                  />
-                </div>
-                {goal.computedStatus === "active" && (
-                  <div className="flex justify-between text-[10px] text-slate-400">
-                    <span>Başlangıç</span>
-                    <span
-                      className={
-                        goal.timePercent > goal.percent
-                          ? "text-red-500 font-semibold"
-                          : "text-emerald-500 font-semibold"
-                      }
-                    >
-                      {goal.timePercent > goal.percent
-                        ? "Zamanın gerisindesin"
-                        : "Zamanın önündesin"}
-                    </span>
-                    <span>Bitiş</span>
+                  >
+                    {goal.computedStatus === "completed"
+                      ? "BAŞARILDI"
+                      : goal.computedStatus === "failed"
+                      ? "BAŞARISIZ"
+                      : goal.risk === "high"
+                      ? "RİSKLİ"
+                      : goal.risk === "good"
+                      ? "İYİ GİDİYOR"
+                      : "AKTİF"}
                   </div>
-                )}
-              </div>
+                </div>
 
-              {/* AI not + pace */}
-              <div className="mt-3 space-y-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                {goal.paceText && (
+                {/* Progress */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs md:text-sm font-medium text-slate-600 dark:text-slate-300">
+                    <span>
+                      {goal.current} / {goal.targetCount}{" "}
+                      {goal.type === "book" ? "kitap" : "sayfa"}
+                    </span>
+                    <span>%{goal.percent}</span>
+                  </div>
+                  <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative">
+                    {goal.computedStatus === "active" && (
+                      <div
+                        className="absolute top-0 left-0 h-full bg-slate-200 dark:bg-slate-700 opacity-60 border-r border-slate-400/80"
+                        style={{ width: `${goal.timePercent}%` }}
+                      />
+                    )}
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        goal.computedStatus === "completed"
+                          ? "bg-emerald-500"
+                          : goal.computedStatus === "failed"
+                          ? "bg-rose-500"
+                          : goal.risk === "high"
+                          ? "bg-red-500"
+                          : "bg-blue-500"
+                      }`}
+                      style={{ width: `${goal.percent}%` }}
+                    />
+                  </div>
+                  {goal.computedStatus === "active" && (
+                    <div className="flex justify-between text-[10px] text-slate-400">
+                      <span>Başlangıç</span>
+                      <span
+                        className={
+                          goal.timePercent > goal.percent
+                            ? "text-red-500 font-semibold"
+                            : "text-emerald-500 font-semibold"
+                        }
+                      >
+                        {goal.timePercent > goal.percent
+                          ? "Zamanın gerisindesin"
+                          : "Zamanın önündesin"}
+                      </span>
+                      <span>Bitiş</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* AI not + pace */}
+                <div className="mt-3 space-y-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                  {goal.paceText && (
+                    <p className="flex items-start gap-1.5">
+                      <Clock className="w-3 h-3 mt-[2px] text-sky-500" />
+                      <span>{goal.paceText}</span>
+                    </p>
+                  )}
                   <p className="flex items-start gap-1.5">
-                    <Clock className="w-3 h-3 mt-[2px] text-sky-500" />
-                    <span>{goal.paceText}</span>
+                    <Sparkles className="w-3 h-3 mt-[2px] text-amber-500" />
+                    <span>{goal.aiNote}</span>
                   </p>
-                )}
-                <p className="flex items-start gap-1.5">
-                  <Sparkles className="w-3 h-3 mt-[2px] text-amber-500" />
-                  <span>{goal.aiNote}</span>
-                </p>
-              </div>
+                </div>
 
-              {/* Sil butonu */}
-              <button
-                onClick={() => handleDelete(goal.id)}
-                className="absolute top-4 right-4 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-full transition opacity-0 group-hover:opacity-100"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
+                {/* Sil butonu */}
+                <button
+                  onClick={() => setDeleteTarget(goal.id)}
+                  className="absolute top-4 right-4 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-full transition opacity-0 group-hover:opacity-100"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
 
           {goalStats.length === 0 && (
             <div className="col-span-2 text-center py-12 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/60">
@@ -925,288 +1055,322 @@ export default function GoalsPage() {
         </div>
       </div>
 
-      {/* MODAL – YENİ HEDEF (overflow fix) */}
-  {/* ------------------ PRO MODAL --------------------- */}
-{isModalOpen && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      {/* MODAL – YENİ HEDEF */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          {/* MODAL KUTUSU */}
+          <div className="w-full max-w-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-white/30 dark:border-slate-700/30 rounded-3xl shadow-2xl shadow-black/30 flex flex-col max-h-[85vh]">
+            {/* HEADER */}
+            <div className="px-6 py-5 border-b border-white/20 dark:border-slate-700/40">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <Target className="w-5 h-5 text-amber-500" />
+                  Yeni Okuma Hedefi
+                </h2>
 
-    {/* MODAL KUTUSU */}
-    <div className="w-full max-w-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl 
-                    border border-white/30 dark:border-slate-700/30 rounded-3xl 
-                    shadow-2xl shadow-black/30 flex flex-col max-h-[85vh]">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-slate-800/50 transition"
+                >
+                  <XCircle className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
 
-      {/* HEADER */}
-      <div className="px-6 py-5 border-b border-white/20 dark:border-slate-700/40">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <Target className="w-5 h-5 text-amber-500" />
-            Yeni Okuma Hedefi
-          </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                Hedef tipini seç, tarih aralığını belirle ve kitaplarını
+                ilişkilendir.
+              </p>
+            </div>
 
-          <button
-            onClick={() => setIsModalOpen(false)}
-            className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-slate-800/50 transition"
-          >
-            <XCircle className="w-5 h-5 text-slate-400" />
-          </button>
-        </div>
+            {/* BODY */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+              {/* Hedef Adı */}
+              <div>
+                <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
+                  Hedef Adı
+                </label>
+                <input
+                  value={newGoal.title}
+                  onChange={(e) =>
+                    setNewGoal((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                  className="w-full mt-1.5 p-3 bg-white/60 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl placeholder-slate-400 focus:ring-2 focus:ring-amber-400/70 focus:border-transparent outline-none text-sm shadow-inner"
+                  placeholder="Örn: Ocak Ayı Okuma Challange"
+                />
+              </div>
 
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-          Hedef tipini seç, tarih aralığını belirle ve kitaplarını ilişkilendir.
-        </p>
-      </div>
+              {/* Tip seçimi */}
+              <div>
+                <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
+                  Hedef Türü
+                </label>
 
-      {/* BODY */}
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
-        {/* Hedef Adı */}
-        <div>
-          <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
-            Hedef Adı
-          </label>
-          <input
-            value={newGoal.title}
-            onChange={(e) =>
-              setNewGoal((prev) => ({ ...prev, title: e.target.value }))
-            }
-            className="w-full mt-1.5 p-3 bg-white/60 dark:bg-slate-800/60 
-                       border border-slate-300 dark:border-slate-700 rounded-xl
-                       placeholder-slate-400
-                       focus:ring-2 focus:ring-amber-400/70 focus:border-transparent 
-                       outline-none text-sm shadow-inner"
-            placeholder="Örn: Ocak Ayı Okuma Challange"
-          />
-        </div>
-
-        {/* Tip seçimi */}
-        <div>
-          <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
-            Hedef Türü
-          </label>
-
-          <div className="mt-2 flex bg-slate-100/70 dark:bg-slate-800/60 
-                          rounded-xl p-1 shadow-inner">
-
-            <button
-              onClick={() =>
-                setNewGoal((prev) => ({ ...prev, type: "book" }))
-              }
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition 
-              ${
-                newGoal.type === "book"
-                  ? "bg-white dark:bg-slate-900 shadow text-amber-600"
-                  : "text-slate-500"
-              }`}
-            >
-              <BookOpen className="w-4 h-4" /> Kitap
-            </button>
-
-            <button
-              onClick={() =>
-                setNewGoal((prev) => ({ ...prev, type: "page" }))
-              }
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition 
-              ${
-                newGoal.type === "page"
-                  ? "bg-white dark:bg-slate-900 shadow text-amber-600"
-                  : "text-slate-500"
-              }`}
-            >
-              📄 Sayfa
-            </button>
-          </div>
-        </div>
-
-        {/* Hedef değeri */}
-        <div>
-          <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
-            Hedef Değeri
-          </label>
-          <input
-            type="number"
-            min="1"
-            value={newGoal.targetCount}
-            onChange={(e) =>
-              setNewGoal((prev) => ({ ...prev, targetCount: e.target.value }))
-            }
-            className="w-full mt-1.5 p-3 bg-white/60 dark:bg-slate-800/60 
-                       border border-slate-300 dark:border-slate-700 rounded-xl
-                       placeholder-slate-400
-                       focus:ring-2 focus:ring-amber-400/70 focus:border-transparent 
-                       outline-none text-sm shadow-inner"
-            placeholder={newGoal.type === "book" ? "Örn: 5 kitap" : "Örn: 350 sayfa"}
-          />
-        </div>
-
-        {/* Tarih seçimleri */}
-       {/* Periyot + Tarih Seçimleri */}
-<div className="space-y-3">
-  {/* Periyot butonları */}
-  <div>
-    <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
-      Periyot
-    </label>
-    <div className="mt-2 flex bg-slate-100/70 dark:bg-slate-800/60 rounded-xl p-1 shadow-inner">
-      {(
-        [
-          { id: "daily", label: "Günlük" },
-          { id: "weekly", label: "Haftalık" },
-          { id: "monthly", label: "Aylık" },
-          { id: "yearly", label: "Yıllık" },
-        ] as { id: GoalPeriod; label: string }[]
-      ).map((p) => (
-        <button
-          key={p.id}
-          type="button"
-          onClick={() => handlePeriodChange(p.id)}
-          className={`flex-1 py-2 rounded-lg text-xs md:text-sm font-semibold transition ${
-            newGoal.periodType === p.id
-              ? "bg-white dark:bg-slate-900 shadow text-amber-600"
-              : "text-slate-500"
-          }`}
-        >
-          {p.label}
-        </button>
-      ))}
-    </div>
-    <p className="text-[11px] text-slate-400 mt-1">
-      Periyodu değiştirdiğinde, bitiş tarihi otomatik olarak güncellenir. İstersen
-      manuel olarak da düzeltebilirsin.
-    </p>
-  </div>
-
-  {/* Başlangıç / Bitiş tarihleri */}
-  <div className="grid grid-cols-2 gap-4">
-    <div>
-      <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
-        Başlangıç
-      </label>
-      <input
-        type="date"
-        value={newGoal.startDate}
-        onChange={(e) =>
-          setNewGoal((prev) => ({ ...prev, startDate: e.target.value }))
-        }
-        className="w-full mt-1.5 p-3 bg-white/60 dark:bg-slate-800/60 
-                   border border-slate-300 dark:border-slate-700 rounded-xl
-                   focus:ring-2 focus:ring-amber-400/70 outline-none text-sm shadow-inner"
-      />
-    </div>
-
-    <div>
-      <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
-        Bitiş
-      </label>
-      <input
-        type="date"
-        value={newGoal.endDate}
-        onChange={(e) =>
-          setNewGoal((prev) => ({ ...prev, endDate: e.target.value }))
-        }
-        className="w-full mt-1.5 p-3 bg-white/60 dark:bg-slate-800/60 
-                   border border-slate-300 dark:border-slate-700 rounded-xl
-                   focus:ring-2 focus:ring-amber-400/70 outline-none text-sm shadow-inner"
-      />
-    </div>
-  </div>
-</div>
-
-        {/* Kitap Multi Select */}
-        <div
-          className={`mt-3 p-4 rounded-2xl border ${
-            newGoal.type === "book"
-              ? "opacity-40 pointer-events-none"
-              : ""
-          } bg-white/60 dark:bg-slate-800/50 border-slate-300 dark:border-slate-700 shadow-inner`}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <BookOpen className="w-4 h-4 text-amber-600" />
-            <h3 className="text-xs font-bold uppercase text-slate-600">
-              Belirli Kitap Hedefi
-            </h3>
-          </div>
-
-          {/* Arama kutusu */}
-          <input
-            type="text"
-            placeholder="Kitap ara..."
-            value={bookSearch}
-            onChange={(e) => setBookSearch(e.target.value)}
-            className="w-full mb-3 p-2 bg-white dark:bg-slate-900 rounded-lg border
-                       border-slate-300 dark:border-slate-700 text-sm shadow-inner"
-          />
-
-          {/* Seçim listesi */}
-          <div className="max-h-40 overflow-y-auto space-y-2">
-            {books
-              .filter((b) =>
-                (b.title + b.author)
-                  .toLowerCase()
-                  .includes(bookSearch.toLowerCase())
-              )
-              .map((b) => {
-                const selected = newGoal.bookIds.includes(b.id);
-                return (
+                <div className="mt-2 flex bg-slate-100/70 dark:bg-slate-800/60 rounded-xl p-1 shadow-inner">
                   <button
-                    key={b.id}
                     onClick={() =>
-                      setNewGoal((prev) => ({
-                        ...prev,
-                        bookIds: selected
-                          ? prev.bookIds.filter((x) => x !== b.id)
-                          : [...prev.bookIds, b.id],
-                      }))
+                      setNewGoal((prev) => ({ ...prev, type: "book" }))
                     }
-                    className={`w-full px-3 py-2 rounded-xl text-left flex items-center gap-3 transition
-                      ${
-                        selected
-                          ? "bg-amber-100 dark:bg-amber-900/40 border border-amber-300"
-                          : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700"
-                      }`}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition ${
+                      newGoal.type === "book"
+                        ? "bg-white dark:bg-slate-900 shadow text-amber-600"
+                        : "text-slate-500"
+                    }`}
                   >
-                    <div className="w-8 h-12 rounded-lg overflow-hidden bg-slate-200">
-                      {b.coverImageUrl && (
-                        <img
-                          src={b.coverImageUrl}
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                    </div>
-                    <div className="text-sm">
-                      <p className="font-semibold text-slate-700 dark:text-slate-200">
-                        {b.title}
-                      </p>
-                      <p className="text-xs text-slate-500">{b.author}</p>
-                    </div>
+                    <BookOpen className="w-4 h-4" /> Kitap
                   </button>
-                );
-              })}
+
+                  <button
+                    onClick={() =>
+                      setNewGoal((prev) => ({ ...prev, type: "page" }))
+                    }
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition ${
+                      newGoal.type === "page"
+                        ? "bg-white dark:bg-slate-900 shadow text-amber-600"
+                        : "text-slate-500"
+                    }`}
+                  >
+                    📄 Sayfa
+                  </button>
+                </div>
+              </div>
+
+              {/* Hedef değeri */}
+              <div>
+                <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
+                  Hedef Değeri
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={newGoal.targetCount}
+                  onChange={(e) =>
+                    setNewGoal((prev) => ({
+                      ...prev,
+                      targetCount: e.target.value,
+                    }))
+                  }
+                  className="w-full mt-1.5 p-3 bg-white/60 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl placeholder-slate-400 focus:ring-2 focus:ring-amber-400/70 focus:border-transparent outline-none text-sm shadow-inner"
+                  placeholder={
+                    newGoal.type === "book"
+                      ? "Örn: 5 kitap"
+                      : "Örn: 350 sayfa"
+                  }
+                />
+              </div>
+
+              {/* Periyot + Tarih Seçimleri */}
+              <div className="space-y-3">
+                {/* Periyot butonları */}
+                <div>
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
+                    Periyot
+                  </label>
+                  <div className="mt-2 flex bg-slate-100/70 dark:bg-slate-800/60 rounded-xl p-1 shadow-inner">
+                    {(
+                      [
+                        { id: "daily", label: "Günlük" },
+                        { id: "weekly", label: "Haftalık" },
+                        { id: "monthly", label: "Aylık" },
+                        { id: "yearly", label: "Yıllık" },
+                      ] as { id: GoalPeriod; label: string }[]
+                    ).map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handlePeriodChange(p.id)}
+                        className={`flex-1 py-2 rounded-lg text-xs md:text-sm font-semibold transition ${
+                          newGoal.periodType === p.id
+                            ? "bg-white dark:bg-slate-900 shadow text-amber-600"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Periyodu değiştirdiğinde, bitiş tarihi otomatik olarak
+                    güncellenir. İstersen manuel olarak da düzeltebilirsin.
+                  </p>
+                </div>
+
+                {/* Başlangıç / Bitiş tarihleri */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
+                      Başlangıç
+                    </label>
+                    <input
+                      type="date"
+                      value={newGoal.startDate}
+                      onChange={(e) =>
+                        setNewGoal((prev) => ({
+                          ...prev,
+                          startDate: e.target.value,
+                        }))
+                      }
+                      className="w-full mt-1.5 p-3 bg-white/60 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-400/70 outline-none text-sm shadow-inner"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
+                      Bitiş
+                    </label>
+                    <input
+                      type="date"
+                      value={newGoal.endDate}
+                      onChange={(e) =>
+                        setNewGoal((prev) => ({
+                          ...prev,
+                          endDate: e.target.value,
+                        }))
+                      }
+                      className="w-full mt-1.5 p-3 bg-white/60 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-400/70 outline-none text-sm shadow-inner"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Kitap Multi Select */}
+              <div
+                className={`mt-3 p-4 rounded-2xl border ${
+                  newGoal.type === "book"
+                    ? "opacity-40 pointer-events-none"
+                    : ""
+                } bg-white/60 dark:bg-slate-800/50 border-slate-300 dark:border-slate-700 shadow-inner`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <BookOpen className="w-4 h-4 text-amber-600" />
+                  <h3 className="text-xs font-bold uppercase text-slate-600">
+                    Belirli Kitap Hedefi
+                  </h3>
+                </div>
+
+                {/* Arama kutusu */}
+                <input
+                  type="text"
+                  placeholder="Kitap ara..."
+                  value={bookSearch}
+                  onChange={(e) => setBookSearch(e.target.value)}
+                  className="w-full mb-3 p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-300 dark:border-slate-700 text-sm shadow-inner"
+                />
+
+                {/* Seçim listesi */}
+                <div className="max-h-40 overflow-y-auto space-y-2">
+                  {books
+                    .filter((b) =>
+                      (b.title + (b.author || ""))
+                        .toLowerCase()
+                        .includes(bookSearch.toLowerCase())
+                    )
+                    .map((b) => {
+                      const selected = newGoal.bookIds.includes(b.id);
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() =>
+                            setNewGoal((prev) => ({
+                              ...prev,
+                              bookIds: selected
+                                ? prev.bookIds.filter((x) => x !== b.id)
+                                : [...prev.bookIds, b.id],
+                            }))
+                          }
+                          className={`w-full px-3 py-2 rounded-xl text-left flex items-center gap-3 transition ${
+                            selected
+                              ? "bg-amber-100 dark:bg-amber-900/40 border border-amber-300"
+                              : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700"
+                          }`}
+                        >
+                          <div className="w-8 h-12 rounded-lg overflow-hidden bg-slate-200">
+                            {b.coverImageUrl && (
+                              <img
+                                src={b.coverImageUrl}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
+                          <div className="text-sm">
+                            <p className="font-semibold text-slate-700 dark:text-slate-200">
+                              {b.title}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {b.author}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            </div>
+
+            {/* FOOTER */}
+            <div className="px-6 py-4 border-t border-white/20 dark:border-slate-700/40 flex gap-3">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 bg-white/40 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:bg-white/60 dark:hover:bg-slate-700/50 transition font-semibold"
+              >
+                İptal
+              </button>
+
+              <button
+                onClick={handleAddGoal}
+                disabled={saving}
+                className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white font-semibold shadow-lg shadow-amber-500/40 hover:bg-amber-600 transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                Kaydet
+              </button>
+            </div>
           </div>
         </div>
+      )}
+
+
+{deleteTarget && (
+  <div className="fixed inset-0 z-[999] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 w-full max-w-md animate-[fadeIn_0.25s_ease]">
+      
+      <div className="flex items-center gap-3 mb-4">
+        <AlertTriangle className="w-7 h-7 text-rose-500" />
+        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+          Hedefi Silmek Üzeresin
+        </h3>
       </div>
 
-      {/* FOOTER */}
-      <div className="px-6 py-4 border-t border-white/20 dark:border-slate-700/40 flex gap-3">
+      <p className="text-slate-600 dark:text-slate-300 text-sm mb-6">
+        Bu hedefi <span className="font-semibold">kalıcı olarak</span> silmek istediğine emin misin?  
+        Geri alma seçeneğin olmayacak.
+      </p>
+
+      <div className="flex gap-3">
         <button
-          onClick={() => setIsModalOpen(false)}
-          className="flex-1 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 
-                     bg-white/40 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700
-                     hover:bg-white/60 dark:hover:bg-slate-700/50 transition font-semibold"
+          onClick={() => setDeleteTarget(null)}
+          className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold"
         >
           İptal
         </button>
 
         <button
-          onClick={handleAddGoal}
-          disabled={saving}
-          className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white font-semibold 
-                     shadow-lg shadow-amber-500/40 hover:bg-amber-600 transition flex items-center justify-center gap-2"
+          onClick={handleDelete}
+          disabled={deleting}
+          className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white font-semibold shadow-lg hover:bg-rose-700 transition flex items-center justify-center gap-2 disabled:opacity-60"
         >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} 
-          Kaydet
+          {deleting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Trash2 className="w-4 h-4" />
+          )}
+          Tamamen Sil
         </button>
       </div>
-
     </div>
   </div>
 )}

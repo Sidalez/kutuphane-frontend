@@ -16,12 +16,13 @@ import {
   Star,
   Plus,
   X,
+  Camera,
 } from "lucide-react";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import { useAuth } from "../auth/AuthContext";
 import type { BookStatus } from "../types/book";
-
+import { Scanner } from "@yudiel/react-qr-scanner";
 interface AIBookResponse {
   found: boolean;
   message?: string;
@@ -89,6 +90,9 @@ export default function AddBookPage() {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchInfo, setSearchInfo] = useState<string | null>(null);
+  // 📷 Kamera ile barkod tarama
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannerError, setScannerError] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
@@ -374,36 +378,51 @@ export default function AddBookPage() {
           numarasını gir. Bilgileri daha sonra elle de düzenleyebilirsin.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-2">
+           <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
             <input
               value={isbn}
               onChange={(e) => setIsbn(e.target.value)}
               onKeyDown={handleIsbnKeyDown}
               placeholder="Örn: 9786051711241"
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-20 text-sm text-slate-900 shadow-sm outline-none ring-0 transition focus:border-primary/60 focus:ring-2 focus:ring-primary/30 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-50"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-24 text-sm text-slate-900 shadow-sm outline-none ring-0 transition focus:border-primary/60 focus:ring-2 focus:ring-primary/30 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-50"
             />
             <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] text-slate-400">
               Enter ile ara
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={handleIsbnSearch}
-            disabled={searching}
-            className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {searching ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Aranıyor...
-              </>
-            ) : (
-              <>ISBN ile doldur</>
-            )}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleIsbnSearch}
+              disabled={searching}
+              className="inline-flex flex-1 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {searching ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Aranıyor...
+                </>
+              ) : (
+                <>ISBN ile doldur</>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setScannerError(null);
+                setIsScannerOpen(true);
+              }}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            >
+              <Camera className="w-4 h-4 mr-1.5" />
+              Tara
+            </button>
+          </div>
         </div>
+
 
         {searchError && (
           <div className="mt-2 inline-flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-100">
@@ -814,6 +833,84 @@ export default function AddBookPage() {
           </button>
         </div>
       </form>
+
+            {/* 📷 Barkod / ISBN kamera tarama modalı */}
+      {isScannerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-slate-950 text-slate-50 border border-slate-700 shadow-2xl relative overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-slate-900 flex items-center justify-center">
+                  <Camera className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Kameradan ISBN Tara</p>
+                  <p className="text-[11px] text-slate-400">
+                    Barkodu kameraya hizaladığında ISBN otomatik doldurulacak.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsScannerOpen(false)}
+                className="text-slate-400 hover:text-slate-200 text-xs"
+              >
+                Kapat
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3">
+              <div className="rounded-xl overflow-hidden border border-slate-800 bg-black">
+                <Scanner
+                  onScan={(detectedCodes) => {
+                    if (!detectedCodes || detectedCodes.length === 0) return;
+                    // İlk bulunan kodu al
+                    const raw = detectedCodes[0]?.rawValue;
+                    if (!raw) return;
+
+                    // Genelde EAN-13 / ISBN barkodu düz string gelir
+                    const cleaned = String(raw).trim();
+                    if (!cleaned) return;
+
+                    setIsbn(cleaned);
+                    setIsScannerOpen(false);
+                    setScannerError(null);
+                    // ISBN alanını doldurduktan sonra otomatik arama
+                    void handleIsbnSearch();
+                  }}
+                  onError={(error) => {
+                    console.error(error);
+                    setScannerError(
+                      "Kameraya erişilirken bir sorun oluştu. Tarayıcı izinlerini kontrol edebilirsin."
+                    );
+                  }}
+                  constraints={{
+                    facingMode: "environment", // mümkünse arka kamera
+                  }}
+                  components={{
+                    finder: true, // ortada hedef alan
+                  }}
+                  className="w-full aspect-[3/4]"
+                />
+              </div>
+
+              {scannerError && (
+                <div className="text-[11px] text-red-400 bg-red-950/40 border border-red-900/70 rounded-lg px-3 py-2 flex gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 mt-[1px]" />
+                  <span>{scannerError}</span>
+                </div>
+              )}
+
+              <p className="text-[11px] text-slate-400">
+                Barkod okunmazsa ışığı açmayı veya barkoda biraz daha yaklaşmayı
+                deneyebilirsin. Bazı eski cihazlarda tarama biraz yavaş
+                çalışabilir.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

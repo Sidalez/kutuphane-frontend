@@ -2,14 +2,13 @@
   "name": "kutuphane-frontend",
   "version": "1.0.0",
   "private": true,
-
   "scripts": {
     "build": "node node_modules/vite/bin/vite.js build",
     "dev": "vite",
     "preview": "vite preview"
   },
-
   "dependencies": {
+    "@yudiel/react-qr-scanner": "^2.4.1",
     "axios": "^1.13.2",
     "clsx": "^2.1.1",
     "firebase": "^12.6.0",
@@ -21,7 +20,6 @@
     "react-router-dom": "^6.30.0",
     "recharts": "^3.4.1"
   },
-
   "devDependencies": {
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
