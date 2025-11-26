@@ -861,37 +861,70 @@ export default function AddBookPage() {
 
             <div className="p-4 space-y-3">
               <div className="rounded-xl overflow-hidden border border-slate-800 bg-black">
-                <Scanner
-                  onScan={(detectedCodes) => {
-                    if (!detectedCodes || detectedCodes.length === 0) return;
-                    // İlk bulunan kodu al
-                    const raw = detectedCodes[0]?.rawValue;
-                    if (!raw) return;
+             <Scanner
+  onScan={(detectedCodes) => {
+    if (!detectedCodes || detectedCodes.length === 0) return;
 
-                    // Genelde EAN-13 / ISBN barkodu düz string gelir
-                    const cleaned = String(raw).trim();
-                    if (!cleaned) return;
+    let foundIsbn: string | null = null;
 
-                    setIsbn(cleaned);
-                    setIsScannerOpen(false);
-                    setScannerError(null);
-                    // ISBN alanını doldurduktan sonra otomatik arama
-                    void handleIsbnSearch();
-                  }}
-                  onError={(error) => {
-                    console.error(error);
-                    setScannerError(
-                      "Kameraya erişilirken bir sorun oluştu. Tarayıcı izinlerini kontrol edebilirsin."
-                    );
-                  }}
-                  constraints={{
-                    facingMode: "environment", // mümkünse arka kamera
-                  }}
-                  components={{
-                    finder: true, // ortada hedef alan
-                  }}
-                  className="w-full aspect-[3/4]"
-                />
+    for (const code of detectedCodes) {
+      const raw = String(code?.rawValue ?? "").trim();
+      if (!raw) continue;
+
+      // Tüm metnin içinden olası ISBN parçasını çıkar
+      // Önce sadece rakam + X/x bırak
+      const onlyDigits = raw.replace(/[^0-9Xx]/g, "");
+
+      // 13 haneli (EAN-13 / ISBN-13), 978 veya 979 ile başlıyorsa
+      if (/^97[89][0-9]{10}$/.test(onlyDigits)) {
+        foundIsbn = onlyDigits;
+        break;
+      }
+
+      // 10 haneli (ISBN-10)
+      if (/^[0-9]{9}[0-9Xx]$/.test(onlyDigits)) {
+        foundIsbn = onlyDigits;
+        break;
+      }
+
+      // Eğer komple string temiz halde değilse, metin içinde ara
+      const matches = raw.match(/97[89][0-9]{10}|[0-9]{9}[0-9Xx]/g);
+      if (matches && matches.length > 0) {
+        // İlk eşleşen aday
+        const candidate = matches[0].replace(/[^0-9Xx]/g, "");
+        if (/^97[89][0-9]{10}$/.test(candidate) || /^[0-9]{9}[0-9Xx]$/.test(candidate)) {
+          foundIsbn = candidate;
+          break;
+        }
+      }
+    }
+
+    if (!foundIsbn) {
+      setScannerError("Bu barkod içinde ISBN formatında bir numara bulunamadı.");
+      return;
+    }
+
+    setIsbn(foundIsbn);
+    setIsScannerOpen(false);
+    setScannerError(null);
+    // ISBN alanını doldurduktan sonra otomatik arama
+    void handleIsbnSearch();
+  }}
+  onError={(error) => {
+    console.error(error);
+    setScannerError(
+      "Kameraya erişilirken bir sorun oluştu. Tarayıcı izinlerini kontrol edebilirsin."
+    );
+  }}
+  constraints={{
+    facingMode: "environment", // mümkünse arka kamera
+  }}
+  components={{
+    finder: true, // ortada hedef alan
+  }}
+  className="w-full aspect-[3/4]"
+/>
+
               </div>
 
               {scannerError && (
