@@ -18,6 +18,8 @@ import {
   Stars,
   ShoppingBag,
   Dice5,
+  CheckCircle2,
+  ChevronRight,
 } from "lucide-react";
 
 type AiTone = "motive" | "calm" | "direct";
@@ -27,14 +29,347 @@ interface AiResponse {
   text: string;
 }
 
+type AiSection = {
+  title: string;
+  items: string[];
+};
+
+type ParsedSuggestion = {
+  title: string;
+  author: string;
+  publisher: string;
+  pageCount: string;
+  genre: string;
+  summary: string;
+  reason: string;
+};
+
 function diffInDays(start?: string | null, end?: string | null) {
   if (!start || !end) return null;
+
   const s = new Date(start);
   const e = new Date(end);
+
   if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
+
   const ms = e.getTime() - s.getTime();
+
   if (ms <= 0) return null;
+
   return Math.max(1, Math.round(ms / (1000 * 60 * 60 * 24)));
+}
+
+function cleanAiLine(line: string) {
+  return line
+    .replace(/\*\*/g, "")
+    .replace(/^#+\s*/g, "")
+    .replace(/^\d+\)\s*/g, "")
+    .replace(/^\d+\.\s*/g, "")
+    .replace(/^[-•]\s*/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getSectionTitle(line: string) {
+  const cleaned = cleanAiLine(line).toLowerCase();
+
+  if (cleaned.includes("kısa profil")) return "Kısa Profil Özeti";
+  if (cleaned.includes("öneri stratej")) return "Öneri Stratejisi";
+
+  if (cleaned.includes("kesinlikle başlaman")) {
+    return "Kesinlikle Başlaman Gerekenler";
+  }
+
+  if (cleaned.includes("başlaman gereken")) {
+    return "Kesinlikle Başlaman Gerekenler";
+  }
+
+  if (cleaned.includes("satın alman")) {
+    return "Satın Alabileceğin Öneriler";
+  }
+
+  if (cleaned.includes("satın alabileceğin")) {
+    return "Satın Alabileceğin Öneriler";
+  }
+
+  if (cleaned.includes("kendimi şanslı")) {
+    return "Kendimi Şanslı Hissediyorum";
+  }
+
+  if (cleaned.includes("şanslı öneri")) {
+    return "Kendimi Şanslı Hissediyorum";
+  }
+
+  return null;
+}
+
+function isNewAiItem(line: string) {
+  const trimmed = line.trim();
+
+  return /^[-•]\s+/.test(trimmed) || /^\d+[.)]\s+/.test(trimmed);
+}
+
+function isDetailLine(line: string) {
+  const cleaned = cleanAiLine(line).toLowerCase();
+
+  return (
+    cleaned.startsWith("sayfa") ||
+    cleaned.startsWith("sayfa sayısı") ||
+    cleaned.startsWith("içerik") ||
+    cleaned.startsWith("konu") ||
+    cleaned.startsWith("neden") ||
+    cleaned.startsWith("açıklama") ||
+    cleaned.startsWith("tür") ||
+    cleaned.startsWith("tur") ||
+    cleaned.startsWith("tema") ||
+    cleaned.startsWith("yazar") ||
+    cleaned.startsWith("kategori") ||
+    cleaned.startsWith("puan") ||
+    cleaned.startsWith("durum") ||
+    cleaned.startsWith("okuma") ||
+    cleaned.startsWith("özet") ||
+    cleaned.startsWith("ozet") ||
+    cleaned.startsWith("yayınevi") ||
+    cleaned.startsWith("yayinevi") ||
+    cleaned.startsWith("yayın evi") ||
+    cleaned.startsWith("yayin evi") ||
+    cleaned.startsWith("publisher")
+  );
+}
+
+function parseAiResult(text: string | null): AiSection[] {
+  if (!text) return [];
+
+  const lines = text
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const sections: AiSection[] = [];
+  let current: AiSection | null = null;
+
+  for (const line of lines) {
+    const title = getSectionTitle(line);
+
+    if (title) {
+      current = {
+        title,
+        items: [],
+      };
+      sections.push(current);
+      continue;
+    }
+
+    if (!current) {
+      current = {
+        title: "Yapay Zekâ Yorumu",
+        items: [],
+      };
+      sections.push(current);
+    }
+
+    const cleaned = cleanAiLine(line);
+    if (!cleaned) continue;
+
+    const shouldStartNewItem =
+      isNewAiItem(line) || current.items.length === 0;
+
+    if (shouldStartNewItem && !isDetailLine(line)) {
+      current.items.push(cleaned);
+    } else {
+      const lastIndex = current.items.length - 1;
+
+      if (lastIndex >= 0) {
+        current.items[lastIndex] = `${current.items[lastIndex]} ${cleaned}`;
+      } else {
+        current.items.push(cleaned);
+      }
+    }
+  }
+
+  return sections.filter((section) => section.items.length > 0);
+}
+
+function normalizeFieldText(value: string) {
+  return cleanAiLine(value)
+    .replace(/\s*\|\s*/g, " | ")
+    .replace(/\s*:\s*/g, ": ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getFieldValue(text: string, labels: string[]) {
+  const allLabels = [
+    "Kitap",
+    "Kitap Adı",
+    "Başlık",
+    "Baslik",
+    "Title",
+    "Yazar",
+    "Yazar Adı",
+    "Author",
+    "Yayinevi",
+    "Yayınevi",
+    "Yayın evi",
+    "Yayin evi",
+    "Yayıncı",
+    "Yayinci",
+    "Publisher",
+    "Sayfa",
+    "Sayfa Sayısı",
+    "Sayfa sayısı",
+    "Page",
+    "Pages",
+    "Tur",
+    "Tür",
+    "Kategori",
+    "Genre",
+    "Ozet",
+    "Özet",
+    "Konu",
+    "Summary",
+    "Neden",
+    "Gerekçe",
+    "Gerekce",
+    "Reason",
+  ]
+    .map(escapeRegex)
+    .join("|");
+
+  for (const label of labels.map(escapeRegex)) {
+    const regex = new RegExp(
+      `(?:^|\\s*(?:\\||—|-|;)\\s*)${label}\\s*:\\s*([\\s\\S]*?)(?=\\s*(?:\\||—|-|;)\\s*(?:${allLabels})\\s*:|$)`,
+      "i"
+    );
+
+    const match = text.match(regex);
+
+    if (match?.[1]) {
+      const value = match[1]
+        .replace(/\s*\|\s*$/g, "")
+        .replace(/\s*[—-]\s*$/g, "")
+        .replace(/\s*;\s*$/g, "")
+        .trim();
+
+      if (value) return value;
+    }
+  }
+
+  return "";
+}
+
+function stripKnownFields(text: string) {
+  return text
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Kitap(?: Adı)?\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Başlık\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Baslik\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Title\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Yazar(?: Adı)?\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Author\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Yay[ıi]nevi\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Yay[ıi]n evi\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Yay[ıi]ncı\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Publisher\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Sayfa(?: Sayısı)?\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Pages?\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)T[üu]r\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Kategori\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Genre\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)[ÖO]zet\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Konu\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Summary\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Neden\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Gerek[çc]e\s*:\s*[^|—;]+/gi, "")
+    .replace(/(?:^|\s*(?:\||—|-|;)\s*)Reason\s*:\s*[^|—;]+/gi, "")
+    .replace(/[|;]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parsePurchaseSuggestion(item: string): ParsedSuggestion {
+  const cleaned = normalizeFieldText(item);
+
+  let title =
+    getFieldValue(cleaned, ["Kitap", "Kitap Adı", "Başlık", "Baslik", "Title"]) ||
+    "";
+
+  let author =
+    getFieldValue(cleaned, ["Yazar", "Yazar Adı", "Author"]) || "";
+
+  const publisher =
+    getFieldValue(cleaned, [
+      "Yayinevi",
+      "Yayınevi",
+      "Yayın evi",
+      "Yayin evi",
+      "Yayıncı",
+      "Yayinci",
+      "Publisher",
+    ]) || "Bilinmiyor";
+
+  const pageCount =
+    getFieldValue(cleaned, ["Sayfa", "Sayfa Sayısı", "Sayfa sayısı", "Page", "Pages"]) ||
+    "Bilinmiyor";
+
+  const genre =
+    getFieldValue(cleaned, ["Tur", "Tür", "Kategori", "Genre"]) ||
+    "Belirtilmemiş";
+
+  const summary =
+    getFieldValue(cleaned, ["Ozet", "Özet", "Konu", "Summary"]) || "";
+
+  let reason =
+    getFieldValue(cleaned, ["Neden", "Gerekçe", "Gerekce", "Reason"]) || "";
+
+  if (!title || !author) {
+    const parts = cleaned
+      .split(/\s+—\s+|\s+-\s+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+
+    if (!title && parts[0]) {
+      title = parts[0]
+        .replace(/^Kitap\s*:\s*/i, "")
+        .replace(/^Kitap Adı\s*:\s*/i, "")
+        .replace(/^Başlık\s*:\s*/i, "")
+        .replace(/^Baslik\s*:\s*/i, "")
+        .replace(/^Title\s*:\s*/i, "")
+        .trim();
+    }
+
+    if (!author && parts[1] && !parts[1].includes(":")) {
+      author = parts[1]
+        .replace(/^Yazar\s*:\s*/i, "")
+        .replace(/^Yazar Adı\s*:\s*/i, "")
+        .replace(/^Author\s*:\s*/i, "")
+        .trim();
+    }
+
+    if (!reason) {
+      const fallbackReason = stripKnownFields(parts.slice(2).join(" — "));
+      reason = fallbackReason;
+    }
+  }
+
+  if (!reason) {
+    reason =
+      "Bu kitap, okuma zevkine ve mevcut profiline uygun bir öneri olarak öne çıkıyor.";
+  }
+
+  return {
+    title: title || "Kitap adı bulunamadı",
+    author: author || "Bilinmiyor",
+    publisher,
+    pageCount,
+    genre,
+    summary,
+    reason,
+  };
 }
 
 export default function SuggestionsPage() {
@@ -56,21 +391,23 @@ export default function SuggestionsPage() {
 
   const [luckyBook, setLuckyBook] = useState<Book | null>(null);
 
-  // Kitapları çek
   useEffect(() => {
     if (!user) return;
 
     const fetchBooks = async () => {
       setLoadingBooks(true);
+
       try {
         const qBooks = query(
           collection(db, "books"),
           where("userId", "==", user.uid)
         );
+
         const snap = await getDocs(qBooks);
         const data = snap.docs.map(
           (d) => ({ id: d.id, ...d.data() } as Book)
         );
+
         setBooks(data);
       } catch (err) {
         console.error("Kitaplar çekilirken hata:", err);
@@ -94,32 +431,28 @@ export default function SuggestionsPage() {
     const reading = books.filter((b) => b.status === "OKUNUYOR");
     const done = books.filter((b) => b.status === "OKUNDU");
 
-    const totalPages = books.reduce(
-      (sum, b) => sum + (b.totalPages || 0),
-      0
-    );
-    const donePages = done.reduce(
-      (sum, b) => sum + (b.totalPages || 0),
-      0
-    );
+    const totalPages = books.reduce((sum, b) => sum + (b.totalPages || 0), 0);
+    const donePages = done.reduce((sum, b) => sum + (b.totalPages || 0), 0);
 
     const ratedFinished = done.filter(
       (b) =>
         (b.finalRating ?? null) !== null ||
         (b.overallRating ?? null) !== null
     );
+
     const avgFinishedRating =
       ratedFinished.length > 0
         ? ratedFinished.reduce(
-            (sum, b) =>
-              sum + (b.overallRating || b.finalRating || 0),
+            (sum, b) => sum + (b.overallRating || b.finalRating || 0),
             0
           ) / ratedFinished.length
         : null;
 
     const favCategoryCount: Record<string, number> = {};
+
     ratedFinished.forEach((b) => {
       const score = b.overallRating || b.finalRating || 0;
+
       if (score >= 4 && Array.isArray(b.categories)) {
         b.categories.forEach((c) => {
           if (!c) return;
@@ -127,19 +460,24 @@ export default function SuggestionsPage() {
         });
       }
     });
+
     const favCategories = Object.entries(favCategoryCount)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([name]) => name);
 
     const speeds: number[] = [];
+
     done.forEach((b) => {
       if (!b.totalPages) return;
+
       const days = diffInDays(b.startDate, b.endDate);
       if (!days) return;
+
       const spd = b.totalPages / days;
       if (spd > 0 && spd < 1000) speeds.push(spd);
     });
+
     const avgPagesPerDay =
       speeds.length > 0
         ? Math.round(
@@ -148,10 +486,10 @@ export default function SuggestionsPage() {
         : null;
 
     let speedLabel = "Veri yetersiz";
+
     if (avgPagesPerDay) {
       if (avgPagesPerDay < 10) speedLabel = "Yavaş / keyifli tempo";
-      else if (avgPagesPerDay < 30)
-        speedLabel = "Orta düzey, dengeli tempo";
+      else if (avgPagesPerDay < 30) speedLabel = "Orta düzey, dengeli tempo";
       else speedLabel = "Hızlı okur";
     }
 
@@ -180,9 +518,8 @@ Favori kategoriler: ${
           : b.status === "OKUNDU"
           ? "Okundu"
           : "Okunacak";
-      return `${b.title} - ${
-        b.author || "Bilinmiyor"
-      } (${s}) • Kategori: ${
+
+      return `${b.title} - ${b.author || "Bilinmiyor"} (${s}) • Kategori: ${
         b.categories?.join(", ") || "-"
       } • Puan: ${
         b.overallRating || b.finalRating || b.expectedRating || "-"
@@ -202,23 +539,24 @@ Favori kategoriler: ${
 
         const rating =
           b.overallRating || b.expectedRating || b.progressRating || 0;
+
         score += rating * 2;
 
         let catBoost = 0;
+
         if (Array.isArray(b.categories) && favCategories.length > 0) {
           b.categories.forEach((c) => {
             if (favCategories.includes(c)) catBoost += 3;
           });
         }
+
         score += catBoost;
 
         if (avgPagesPerDay && b.totalPages) {
           const idealMin = avgPagesPerDay * 4;
           const idealMax = avgPagesPerDay * 12;
-          if (
-            b.totalPages >= idealMin &&
-            b.totalPages <= idealMax
-          ) {
+
+          if (b.totalPages >= idealMin && b.totalPages <= idealMax) {
             score += 4;
           }
         }
@@ -227,13 +565,8 @@ Favori kategoriler: ${
       })
       .sort((a, b) => b.score - a.score);
 
-    const topMustRead = rankedCandidates
-      .slice(0, 3)
-      .map((x) => x.book);
-
-    const secondaryGood = rankedCandidates
-      .slice(3, 6)
-      .map((x) => x.book);
+    const topMustRead = rankedCandidates.slice(0, 3).map((x) => x.book);
+    const secondaryGood = rankedCandidates.slice(3, 6).map((x) => x.book);
 
     return {
       summary: {
@@ -258,7 +591,9 @@ Favori kategoriler: ${
     };
   }, [books]);
 
-const handleGenerate = async () => {
+  const aiSections = useMemo(() => parseAiResult(aiResult), [aiResult]);
+
+  const handleGenerate = async () => {
     setAiError(null);
     setAiResult(null);
     setAiLoading(true);
@@ -289,7 +624,6 @@ const handleGenerate = async () => {
         })),
       };
 
-      // 🚀 Burayı apiClient ile düzelttik
       const res = await api.post<AiResponse>("/api/ai/recommend", payload);
       const data = res.data;
 
@@ -307,10 +641,12 @@ const handleGenerate = async () => {
       topMustRead.length > 0
         ? topMustRead
         : rankedCandidates.map((x) => x.book);
+
     if (pool.length === 0) {
       setLuckyBook(null);
       return;
     }
+
     const idx = Math.floor(Math.random() * pool.length);
     setLuckyBook(pool[idx]);
   };
@@ -320,56 +656,57 @@ const handleGenerate = async () => {
       ? "Kütüphanemden hangi kitaba başlamalıyım?"
       : "Yeni hangi kitabı satın almalıyım?";
 
-  // AI text'i kartlara bölelim
-  const aiParagraphs =
-    aiResult
-      ?.split(/\n\s*\n/)
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0) || [];
-
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6 text-slate-800 dark:text-slate-100">
-      {/* HERO */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 text-white shadow-xl">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_60%)]" />
+
         <div className="relative p-6 md:p-8 flex flex-col md:flex-row gap-6 md:gap-10 items-start md:items-center">
           <div className="flex-1 space-y-3">
             <div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-3 py-1 text-xs font-semibold backdrop-blur-sm border border-white/30">
               <Sparkles className="w-3 h-3" />
-              <span>Yapay Zekâ Destekli Öneriler</span>
+              <span>Akıllı Okuma Önerileri</span>
             </div>
+
             <h1 className="text-2xl md:text-3xl font-black flex items-center gap-2">
               <Brain className="w-7 h-7" />
               Okuma Öneri Asistanı
             </h1>
+
             <p className="text-sm md:text-base text-white/90 max-w-xl">
               Okuduğun kitapları, verdiğin puanları, okuma hızını ve ruh
-              halini analiz edip senin için en mantıklı sıradaki kitabı ve
-              yeni keşfedilecek kitapları önerir.
+              halini analiz edip senin için en mantıklı sıradaki kitabı ve yeni
+              keşfedilecek kitapları önerir.
             </p>
           </div>
+
           <div className="w-full md:w-64 bg-white/15 rounded-2xl p-4 backdrop-blur-md border border-white/30">
             <p className="text-xs uppercase tracking-wide text-white/80 font-semibold flex items-center gap-1">
               <Target className="w-3 h-3" />
               Okuma hedef panosu
             </p>
+
             <div className="mt-3 space-y-1.5 text-xs">
               <div className="flex justify-between">
                 <span>Toplam Kitap</span>
                 <strong>{summary.total}</strong>
               </div>
+
               <div className="flex justify-between">
                 <span>Okunuyor</span>
                 <strong>{summary.readingCount}</strong>
               </div>
+
               <div className="flex justify-between">
                 <span>Okunacak</span>
                 <strong>{summary.toReadCount}</strong>
               </div>
+
               <div className="flex justify-between">
                 <span>Okundu</span>
                 <strong>{summary.doneCount}</strong>
               </div>
+
               {readerProfile.avgPagesPerDay && (
                 <div className="flex justify-between pt-1 border-t border-white/30 mt-1">
                   <span>Hız (syf/gün)</span>
@@ -381,15 +718,13 @@ const handleGenerate = async () => {
         </div>
       </div>
 
-      {/* ANA GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* SOL: FORM */}
         <div className="lg:col-span-1 space-y-4">
-          {/* ÖNERİ TİPİ */}
           <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
             <p className="text-xs font-bold uppercase text-slate-400 mb-2">
               Öneri tipi
             </p>
+
             <div className="flex flex-col gap-2">
               <button
                 type="button"
@@ -401,13 +736,14 @@ const handleGenerate = async () => {
                 }`}
               >
                 <BookOpen className="w-4 h-4 flex-shrink-0" />
+
                 <div>
                   <div className="font-semibold">
                     Kütüphanemden başlayacağım kitabı seç
                   </div>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Kendi kitapların arasından, sıradaki en mantıklı
-                    kitabı belirle.
+                    Kendi kitapların arasından, sıradaki en mantıklı kitabı
+                    belirle.
                   </div>
                 </div>
               </button>
@@ -422,25 +758,26 @@ const handleGenerate = async () => {
                 }`}
               >
                 <ShoppingBag className="w-4 h-4 flex-shrink-0" />
+
                 <div>
                   <div className="font-semibold">
                     Satın alacağım yeni kitabı öner
                   </div>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Okuma profilini ve sevdiğin türleri analiz ederek
-                    dışarıdan alabileceğin kitaplar öner.
+                    Okuma profilini ve sevdiğin türleri analiz ederek dışarıdan
+                    alabileceğin kitaplar öner.
                   </div>
                 </div>
               </button>
             </div>
           </div>
 
-          {/* PROFİL FORMU */}
           <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-900">
                 <MessageCircle className="w-4 h-4 text-amber-500" />
               </div>
+
               <div>
                 <p className="text-xs font-bold uppercase text-slate-400">
                   Bugünkü Profilin
@@ -455,6 +792,7 @@ const handleGenerate = async () => {
               <label className="text-xs font-semibold text-slate-500 dark:text-slate-300">
                 Ruh Halin
               </label>
+
               <select
                 value={mood}
                 onChange={(e) => setMood(e.target.value)}
@@ -473,6 +811,7 @@ const handleGenerate = async () => {
                 <Clock className="w-3 h-3" />
                 Bugün okumaya ayırabileceğin süre (dakika)
               </label>
+
               <input
                 type="number"
                 min={5}
@@ -487,6 +826,7 @@ const handleGenerate = async () => {
               <label className="text-xs font-semibold text-slate-500 dark:text-slate-300">
                 Öneri stili
               </label>
+
               <div className="mt-1.5 flex bg-slate-100 dark:bg-slate-900 rounded-xl p-1">
                 {[
                   { id: "motive", label: "Motive edici" },
@@ -513,6 +853,7 @@ const handleGenerate = async () => {
               <label className="text-xs font-semibold text-slate-500 dark:text-slate-300">
                 Bugün ne tarz bir şeyler okumak / satın almak istiyorsun?
               </label>
+
               <textarea
                 value={preferenceText}
                 onChange={(e) => setPreferenceText(e.target.value)}
@@ -527,7 +868,6 @@ const handleGenerate = async () => {
             </div>
           </div>
 
-          {/* BUTONLAR */}
           <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 flex flex-col gap-3 shadow-sm">
             <button
               onClick={handleGenerate}
@@ -552,16 +892,14 @@ const handleGenerate = async () => {
             </button>
 
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Yapay zekâ, okuduğun kitapları ve kütüphanendeki adayları
-              internette araştırarak hem detaylı bir yorum üretir, hem de
-              senin için en mantıklı sıradaki kitabı işaret eder.
+              Sistem, okuduğun kitapları ve kütüphanendeki adayları analiz
+              ederek hem düzenli bir yorum üretir hem de senin için en mantıklı
+              sıradaki kitabı işaret eder.
             </p>
           </div>
         </div>
 
-        {/* SAĞ: AI CEVAP + KARTLAR */}
         <div className="lg:col-span-2 space-y-4">
-          {/* AI CEVAP – DAHA “LUX” TASARIM */}
           <div className="bg-gradient-to-br from-slate-900/90 via-slate-900 to-slate-950 rounded-3xl p-[1px] shadow-xl">
             <div className="bg-white/95 dark:bg-slate-950 rounded-[22px] p-5 md:p-6 flex flex-col h-full">
               <div className="flex items-start justify-between gap-3 mb-4">
@@ -569,18 +907,18 @@ const handleGenerate = async () => {
                   <div className="p-2 rounded-2xl bg-indigo-100 dark:bg-indigo-900/60">
                     <Quote className="w-4 h-4 text-indigo-600 dark:text-indigo-200" />
                   </div>
+
                   <div>
                     <p className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
-                      Yapay Zekâ Yorumu
+                      Öneri Yorumu
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Okuma geçmişin ve kütüphanen üzerinden üretilen
-                      detaylı öneri & yorum paneli.
+                      Okuma geçmişin ve kütüphanen üzerinden üretilen düzenli
+                      öneri paneli.
                     </p>
                   </div>
                 </div>
 
-                {/* Mini profil badge kolonu */}
                 <div className="hidden md:flex flex-col gap-1 text-[11px] text-slate-500 dark:text-slate-400">
                   <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-900">
                     <Target className="w-3 h-3" />
@@ -588,10 +926,12 @@ const handleGenerate = async () => {
                       ? "Kütüphane odaklı"
                       : "Yeni kitap odaklı"}
                   </div>
+
                   <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-900">
                     <MessageCircle className="w-3 h-3" />
                     Ruh: {mood}
                   </div>
+
                   <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-900">
                     <Clock className="w-3 h-3" />
                     Süre: {availableMinutes || 0} dk
@@ -602,6 +942,7 @@ const handleGenerate = async () => {
               {aiError && (
                 <div className="flex items-start gap-2 text-xs bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-2xl px-3 py-2 mb-3">
                   <AlertTriangle className="w-4 h-4 mt-0.5" />
+
                   <div>
                     <strong className="block mb-0.5">
                       Öneri alınırken bir hata oluştu
@@ -612,12 +953,12 @@ const handleGenerate = async () => {
               )}
 
               <div className="flex-1 flex flex-col md:flex-row gap-4">
-                {/* Sol sütun: küçük profil kartı */}
                 <div className="md:w-40 lg:w-48 hidden md:flex flex-col gap-2 text-[11px]">
                   <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/70 p-3 space-y-1.5">
                     <p className="text-[10px] font-semibold text-slate-400 uppercase">
                       Okur Profili Özeti
                     </p>
+
                     <div className="flex justify-between">
                       <span>Ortalama puan</span>
                       <span className="font-semibold text-amber-500">
@@ -627,6 +968,7 @@ const handleGenerate = async () => {
                         {readerProfile.avgFinishedRating && " ★"}
                       </span>
                     </div>
+
                     <div className="flex justify-between">
                       <span>Hız</span>
                       <span className="font-semibold">
@@ -635,14 +977,17 @@ const handleGenerate = async () => {
                           : "-"}
                       </span>
                     </div>
+
                     <div className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
                       {readerProfile.speedLabel}
                     </div>
+
                     {readerProfile.favCategories.length > 0 && (
                       <div className="pt-1 border-t border-slate-200 dark:border-slate-800 mt-1">
                         <p className="text-[10px] font-semibold mb-1">
                           Öne çıkan türler:
                         </p>
+
                         <div className="flex flex-wrap gap-1">
                           {readerProfile.favCategories.map((c) => (
                             <span
@@ -656,6 +1001,7 @@ const handleGenerate = async () => {
                       </div>
                     )}
                   </div>
+
                   <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/60 p-3 text-[10px] text-slate-500 dark:text-slate-400">
                     <p className="font-semibold mb-1">
                       Ton:{" "}
@@ -666,36 +1012,205 @@ const handleGenerate = async () => {
                         : "Net & kısa"}
                     </p>
                     <p>
-                      AI, bu tona göre hem cümle ritmini hem de öneri
-                      dilini ayarlıyor.
+                      Seçtiğin ton, öneri metninin ritmini ve anlatım dilini
+                      belirler.
                     </p>
                   </div>
                 </div>
 
-                {/* Sağ sütun: asıl yorumlar */}
                 <div className="flex-1">
                   {aiLoading && (
-                    <div className="h-full flex flex-col items-center justify-center gap-2 text-sm text-slate-500">
+                    <div className="h-full min-h-[280px] flex flex-col items-center justify-center gap-2 text-sm text-slate-500">
                       <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
-                      <p>
-                        Öneriler hazırlanıyor, birkaç saniye sürebilir...
-                      </p>
+                      <p>Öneriler hazırlanıyor, birkaç saniye sürebilir...</p>
                     </div>
                   )}
 
                   {!aiLoading && aiResult && (
-                    <div className="space-y-3">
-                      {aiParagraphs.map((para, idx) => (
-                        <div
-                          key={idx}
-                          className="relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 px-3.5 py-3 text-sm text-slate-700 dark:text-slate-100 shadow-sm"
-                        >
-                          <div className="absolute -left-2 -top-2 w-6 h-6 rounded-full bg-slate-900 dark:bg-slate-100 text-[10px] flex items-center justify-center text-white dark:text-slate-900 font-bold shadow-md">
-                            {idx + 1}
+                    <div className="space-y-4">
+                      {aiSections.map((section, sectionIdx) => {
+                        const lowerTitle = section.title.toLowerCase();
+                        const isLucky = lowerTitle.includes("şanslı");
+                        const isPurchase = lowerTitle.includes("satın");
+                        const isMustRead =
+                          lowerTitle.includes("kesinlikle") || isPurchase;
+
+                        return (
+                          <div
+                            key={`${section.title}-${sectionIdx}`}
+                            className={`rounded-3xl border p-4 md:p-5 shadow-sm ${
+                              isLucky
+                                ? "border-indigo-200 dark:border-indigo-800 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/30"
+                                : isPurchase
+                                ? "border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-950/30 dark:via-slate-950 dark:to-teal-950/20"
+                                : isMustRead
+                                ? "border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/30 dark:to-slate-950"
+                                : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 mb-3">
+                              <div
+                                className={`w-9 h-9 rounded-2xl flex items-center justify-center ${
+                                  isLucky
+                                    ? "bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-200"
+                                    : isPurchase
+                                    ? "bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-200"
+                                    : isMustRead
+                                    ? "bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-200"
+                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-200"
+                                }`}
+                              >
+                                {isLucky ? (
+                                  <Dice5 className="w-4 h-4" />
+                                ) : isPurchase ? (
+                                  <ShoppingBag className="w-4 h-4" />
+                                ) : isMustRead ? (
+                                  <Stars className="w-4 h-4" />
+                                ) : (
+                                  <Quote className="w-4 h-4" />
+                                )}
+                              </div>
+
+                              <div>
+                                <h3 className="text-sm md:text-base font-bold text-slate-900 dark:text-slate-50">
+                                  {section.title}
+                                </h3>
+
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                  {isLucky
+                                    ? "Bugün için öne çıkan tek öneri"
+                                    : isPurchase
+                                    ? "Satın alma için düzenlenmiş kitap kartları"
+                                    : isMustRead
+                                    ? "Analize göre öncelikli kitap önerileri"
+                                    : "Okuma profilinden çıkarılan yorum"}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              {section.items.map((item, itemIdx) => {
+                                const parsedPurchase =
+                                  parsePurchaseSuggestion(item);
+
+                                if (isPurchase) {
+                                  return (
+                                    <div
+                                      key={itemIdx}
+                                      className="group relative overflow-hidden rounded-3xl border border-emerald-200/80 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-950/30 dark:via-slate-950 dark:to-teal-950/20 p-4 shadow-sm hover:shadow-md transition"
+                                    >
+                                      <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-200/30 dark:bg-emerald-700/10 rounded-full blur-2xl translate-x-8 -translate-y-8" />
+
+                                      <div className="relative flex gap-3">
+                                        <div className="w-11 h-11 rounded-2xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-200 flex items-center justify-center flex-shrink-0">
+                                          <ShoppingBag className="w-5 h-5" />
+                                        </div>
+
+                                        <div className="min-w-0 flex-1">
+                                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600 text-white text-[11px] font-bold">
+                                              {itemIdx + 1}
+                                            </span>
+
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/80 dark:bg-slate-900/80 border border-emerald-200 dark:border-emerald-800 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                                              Satın alma adayı
+                                            </span>
+                                          </div>
+
+                                          <h4 className="text-sm md:text-base font-bold text-slate-900 dark:text-slate-50 leading-snug">
+                                            {parsedPurchase.title}
+                                          </h4>
+
+                                          <p className="mt-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                            {parsedPurchase.author}
+                                          </p>
+
+                                          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                                            <div className="rounded-2xl border border-emerald-100 dark:border-emerald-900 bg-white/70 dark:bg-slate-950/40 px-3 py-2">
+                                              <p className="text-slate-400 font-semibold">
+                                                Yayınevi
+                                              </p>
+                                              <p className="mt-0.5 text-slate-700 dark:text-slate-200 font-medium">
+                                                {parsedPurchase.publisher}
+                                              </p>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-emerald-100 dark:border-emerald-900 bg-white/70 dark:bg-slate-950/40 px-3 py-2">
+                                              <p className="text-slate-400 font-semibold">
+                                                Sayfa
+                                              </p>
+                                              <p className="mt-0.5 text-slate-700 dark:text-slate-200 font-medium">
+                                                {parsedPurchase.pageCount}
+                                              </p>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-emerald-100 dark:border-emerald-900 bg-white/70 dark:bg-slate-950/40 px-3 py-2">
+                                              <p className="text-slate-400 font-semibold">
+                                                Tür
+                                              </p>
+                                              <p className="mt-0.5 text-slate-700 dark:text-slate-200 font-medium">
+                                                {parsedPurchase.genre}
+                                              </p>
+                                            </div>
+                                          </div>
+
+                                          {parsedPurchase.summary && (
+                                            <div className="mt-3 rounded-2xl bg-white/70 dark:bg-slate-950/40 border border-slate-200/70 dark:border-slate-800 px-3 py-2.5">
+                                              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-1">
+                                                Kısa özet
+                                              </p>
+                                              <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+                                                {parsedPurchase.summary}
+                                              </p>
+                                            </div>
+                                          )}
+
+                                          <div className="mt-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 px-3 py-2.5">
+                                            <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-300 mb-1">
+                                              Neden önerildi?
+                                            </p>
+                                            <p className="text-sm leading-6 text-slate-700 dark:text-slate-200">
+                                              {parsedPurchase.reason}
+                                            </p>
+                                          </div>
+
+                                          <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                                            <span className="px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-200 font-medium">
+                                              Profiline uygun
+                                            </span>
+                                            <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 font-medium">
+                                              Yeni keşif
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div
+                                    key={itemIdx}
+                                    className="flex gap-2 rounded-2xl bg-white/70 dark:bg-slate-950/40 border border-slate-200/70 dark:border-slate-800 px-3 py-2.5"
+                                  >
+                                    <div className="mt-0.5 flex-shrink-0">
+                                      {isMustRead || isLucky ? (
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                      ) : (
+                                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                                      )}
+                                    </div>
+
+                                    <p className="text-sm leading-6 text-slate-700 dark:text-slate-200">
+                                      {item}
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                          {para}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 
@@ -708,12 +1223,12 @@ const handleGenerate = async () => {
                         <strong>bugünkü süreni</strong> seç, sonra{" "}
                         <strong>“Önerileri Oluştur”</strong> butonuna bas.
                       </p>
+
                       <p>
-                        Asistan; okuduğun kitapları, puanlarını, hızını
-                        ve sevdiğin türleri analiz edip senin için hem
-                        kütüphanenden hem de dışarıdan mantıklı
-                        seçenekler önerir. Aşağıdaki kartlar ise bu
-                        önerileri somut kitaplar olarak gösterir.
+                        Asistan; okuduğun kitapları, puanlarını, hızını ve
+                        sevdiğin türleri analiz edip senin için hem
+                        kütüphanenden hem de dışarıdan mantıklı seçenekler
+                        önerir.
                       </p>
                     </div>
                   )}
@@ -722,10 +1237,8 @@ const handleGenerate = async () => {
             </div>
           </div>
 
-          {/* KÜTÜPHANE ÖNERİLERİ – sadece kütüphane modu */}
           {goal === "choose_library_book" && rankedCandidates.length > 0 && (
             <div className="space-y-4">
-              {/* Kesinlikle başlaman gerekenler */}
               {topMustRead.length > 0 && (
                 <div className="bg-white dark:bg-slate-950 border border-amber-200/60 dark:border-amber-700/60 rounded-3xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
@@ -733,13 +1246,14 @@ const handleGenerate = async () => {
                       <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/40">
                         <Stars className="w-4 h-4 text-amber-600" />
                       </div>
+
                       <div>
                         <p className="text-xs font-bold uppercase text-amber-700 dark:text-amber-300">
                           Kesinlikle başlaman gerekenler
                         </p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Okuma profiline göre en yüksek puanı alan
-                          kütüphane kitapların.
+                          Okuma profiline göre en yüksek puanı alan kütüphane
+                          kitapların.
                         </p>
                       </div>
                     </div>
@@ -760,23 +1274,25 @@ const handleGenerate = async () => {
                               />
                             )}
                           </div>
+
                           <div className="min-w-0">
                             <p className="text-sm font-semibold line-clamp-2">
                               {b.title}
                             </p>
+
                             <p className="text-xs text-slate-500">
                               {b.author || "Bilinmeyen Yazar"}
                             </p>
+
                             {b.isbn && (
                               <p className="text-[10px] text-slate-500 mt-0.5">
                                 ISBN:{" "}
-                                <span className="font-mono">
-                                  {b.isbn}
-                                </span>
+                                <span className="font-mono">{b.isbn}</span>
                               </p>
                             )}
                           </div>
                         </div>
+
                         <div className="flex justify-between items-center text-[11px] text-slate-600 dark:text-slate-300">
                           <span>
                             Durum:{" "}
@@ -786,12 +1302,14 @@ const handleGenerate = async () => {
                                 : "Okunacak"}
                             </strong>
                           </span>
+
                           {b.totalPages && (
                             <span>
                               {(b.pagesRead || 0)}/{b.totalPages} sf
                             </span>
                           )}
                         </div>
+
                         {(b.overallRating ||
                           b.finalRating ||
                           b.expectedRating) && (
@@ -812,7 +1330,6 @@ const handleGenerate = async () => {
                 </div>
               )}
 
-              {/* Diğer güçlü adaylar */}
               {secondaryGood.length > 0 && (
                 <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
@@ -820,6 +1337,7 @@ const handleGenerate = async () => {
                       <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-900">
                         <BookOpen className="w-4 h-4 text-slate-700 dark:text-slate-200" />
                       </div>
+
                       <div>
                         <p className="text-xs font-bold uppercase text-slate-500">
                           Profiline göre diğer güçlü adaylar
@@ -845,13 +1363,16 @@ const handleGenerate = async () => {
                             />
                           )}
                         </div>
+
                         <div className="min-w-0">
                           <p className="text-sm font-semibold line-clamp-1">
                             {b.title}
                           </p>
+
                           <p className="text-xs text-slate-500">
                             {b.author || "Bilinmeyen Yazar"}
                           </p>
+
                           <p className="mt-1 text-[11px] text-slate-500">
                             {b.totalPages && (
                               <>
@@ -860,10 +1381,7 @@ const handleGenerate = async () => {
                             )}{" "}
                             {Array.isArray(b.categories) &&
                               b.categories.length > 0 && (
-                                <>
-                                  {" "}
-                                  • {b.categories.join(", ")}
-                                </>
+                                <> • {b.categories.join(", ")}</>
                               )}
                           </p>
                         </div>
@@ -875,7 +1393,6 @@ const handleGenerate = async () => {
             </div>
           )}
 
-          {/* ŞANSLI HİSSEDİYORUM KARTI */}
           {luckyBook && (
             <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-amber-500 text-white rounded-3xl p-4 md:p-5 shadow-xl flex flex-col md:flex-row gap-4 items-center">
               <div className="w-20 h-28 rounded-xl overflow-hidden bg-white/10 flex-shrink-0">
@@ -886,20 +1403,24 @@ const handleGenerate = async () => {
                   />
                 )}
               </div>
+
               <div className="flex-1 space-y-1">
                 <div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-3 py-1 text-[11px] font-semibold">
                   <Dice5 className="w-3 h-3" />
                   Kendimi şanslı hissediyorum
                 </div>
+
                 <h3 className="text-lg md:text-xl font-bold">
                   Bugün şansını bu kitapla dene:
                 </h3>
+
                 <p className="font-semibold">
                   {luckyBook.title}{" "}
                   <span className="text-sm opacity-90">
                     — {luckyBook.author || "Bilinmeyen Yazar"}
                   </span>
                 </p>
+
                 <p className="text-xs opacity-90">
                   Durum:{" "}
                   {luckyBook.status === "OKUNUYOR"
@@ -907,8 +1428,7 @@ const handleGenerate = async () => {
                     : "Okunacak, yeni bir başlangıç için hazır."}{" "}
                   {luckyBook.totalPages && (
                     <>
-                      • {(luckyBook.pagesRead || 0)}/
-                      {luckyBook.totalPages} sf
+                      • {(luckyBook.pagesRead || 0)}/{luckyBook.totalPages} sf
                     </>
                   )}
                 </p>
@@ -916,14 +1436,13 @@ const handleGenerate = async () => {
             </div>
           )}
 
-          {/* Yeni kitap modu için not */}
           {goal === "choose_new_book" && (
             <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 text-xs text-slate-500 dark:text-slate-400">
-              Yapay zekâ, yukarıdaki yorumda senin okuduğun kitapları ve
-              kütüphaneni internette araştırarak{" "}
+              Sistem, yukarıdaki yorumda senin okuduğun kitapları ve
+              kütüphaneni analiz ederek{" "}
               <strong>satın alman için dışarıdan yeni kitaplar</strong>{" "}
-              öneriyor. Önerilen kitap adlarını AI cevabı içinden çekip
-              istersen ayrıca not alabilir veya harici listene ekleyebilirsin.
+              öneriyor. Önerilen kitap adlarını yorum kartlarından okuyabilir,
+              istersen harici listene ekleyebilirsin.
             </div>
           )}
         </div>

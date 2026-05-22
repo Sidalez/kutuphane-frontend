@@ -9,11 +9,16 @@ import {
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 export default function TopBar() {
   const { theme, toggleTheme } = useTheme();
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
+const location = useLocation();
+
+const isMediaModule = location.pathname.startsWith("/media") || 
+                      location.pathname.startsWith("/add-media");
 
   return (
     <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-slate-200/80 dark:border-slate-800/80 bg-gradient-to-r from-orange-50/90 via-white/90 to-slate-50/90 dark:from-slate-950/90 dark:via-slate-900/90 dark:to-slate-950/90 backdrop-blur-md shadow-sm">
@@ -33,19 +38,34 @@ export default function TopBar() {
       </div>
 
       {/* Orta kısım: modüller (şimdilik kitaplar aktif) */}
-      <div className="hidden md:flex items-center">
-        <div className="inline-flex items-center p-1 rounded-full bg-slate-900/5 dark:bg-slate-50/5 border border-slate-200/60 dark:border-slate-700/70">
-          <button className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 shadow-sm shadow-slate-200/60 dark:shadow-slate-950/80">
-            Kitaplar
-          </button>
-          <button
-            disabled
-            className="px-3 py-1.5 rounded-full text-xs font-medium text-slate-400 dark:text-slate-500 cursor-not-allowed"
-          >
-            Film &amp; Dizi (yakında)
-          </button>
-        </div>
-      </div>
+ <div className="hidden md:flex items-center">
+  <div className="inline-flex items-center p-1 rounded-full bg-slate-900/5 dark:bg-slate-50/5 border border-slate-200/60 dark:border-slate-700/70">
+    <button
+      onClick={() => navigate("/library")}
+      className={[
+        "px-3 py-1.5 rounded-full text-xs font-semibold transition",
+        !isMediaModule
+          ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 shadow-sm"
+          : "text-slate-400 dark:text-slate-500",
+      ].join(" ")}
+    >
+      Kitaplar
+    </button>
+
+    <button
+      onClick={() => navigate("/media")}
+      className={[
+        "px-3 py-1.5 rounded-full text-xs font-semibold transition",
+        isMediaModule
+          ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 shadow-sm"
+          : "text-slate-400 dark:text-slate-500",
+      ].join(" ")}
+    >
+      Film &amp; Diziler
+    </button>
+  </div>
+</div>
+
 
       {/* Sağ taraf: tema + kullanıcı */}
       <div className="flex items-center gap-3">

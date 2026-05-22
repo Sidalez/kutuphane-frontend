@@ -11,6 +11,8 @@ import EditBookPage from "./pages/EditBookPage";
 import StatisticsPage from "./pages/StatisticsPage";
 import GoalsPage from "./pages/GoalsPage";
 import SuggestionsPage from "./pages/SuggestionsPage";
+import AddMediaPage from "./pages/AddMediaPage";
+
 export default function App() {
   const { user, loading } = useAuth();
 
@@ -43,6 +45,8 @@ export default function App() {
              <Route path="/statistics" element={<StatisticsPage />} />
              <Route path="/goals" element={<GoalsPage />} />
               <Route path="/suggestions" element={<SuggestionsPage />} />
+                {/* 🎬 Film / Dizi */}
+    <Route path="/add-media" element={<AddMediaPage />} />
         </Route>
       )}
     </Routes>

@@ -425,6 +425,35 @@ export default function StatisticsPage() {
       daysLeft: number;
       date: string;
     }[];
+// 🔹 Seçili dönemde okunan / üzerinde çalışılan kitaplar
+    const periodBookMap: Record<
+      string,
+      { pages: number; minutes: number }
+    > = {};
+
+    periodLogs.forEach((l) => {
+      const pages = Number(l.totalRead) || 0;
+      const mins = calculateMinutes(l.startTime, l.endTime);
+      if (!periodBookMap[l.bookId]) {
+        periodBookMap[l.bookId] = { pages: 0, minutes: 0 };
+      }
+      periodBookMap[l.bookId].pages += pages;
+      if (mins > 0) periodBookMap[l.bookId].minutes += mins;
+    });
+
+    const periodBooks = Object.entries(periodBookMap)
+      .map(([bookId, agg]) => {
+        const book = books.find((b) => b.id === bookId);
+        if (!book) return null;
+        return { book, ...agg };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.pages - a.pages) as {
+      book: Book;
+      pages: number;
+      minutes: number;
+    }[];
+
 
     // Grafik verisi
     const chartData: { name: string; pages: number; minutes: number }[] = [];
@@ -677,6 +706,7 @@ if (bd && bd.value > 0) {
       },
       last7Avg,
       inProgressForecasts,
+      periodBooks,
     };
   }, [allLogs, books, viewMode, currentDate]);
 
@@ -1172,6 +1202,94 @@ if (bd && bd.value > 0) {
               </div>
             </div>
           </div>
+          {/* SEÇİLİ DÖNEMDE OKUNAN / ÜZERİNDE ÇALIŞILAN KİTAPLAR */}
+          {stats.periodBooks.length > 0 && (
+            <div className="bg-white dark:bg-slate-950 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  Seçili Dönemde Kitaplar
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {stats.periodLabel} döneminde okuduğun / üzerinde
+                  çalıştığın kitaplar.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {stats.periodBooks.slice(0, 9).map((item) => {
+                  const b = item.book;
+                  const progress =
+                    b.totalPages && b.totalPages > 0
+                      ? Math.min(
+                          100,
+                          Math.round(
+                            ((b.pagesRead || 0) / b.totalPages) * 100
+                          )
+                        )
+                      : 0;
+
+                  const statusBadge =
+                    b.status === "OKUNDU"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : b.status === "OKUNUYOR"
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-indigo-100 text-indigo-700";
+
+                  return (
+                    <div
+                      key={b.id}
+                      className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 p-4 flex gap-3"
+                    >
+                      <div className="w-12 h-18 rounded-lg bg-slate-200 overflow-hidden flex-shrink-0">
+                        {b.coverImageUrl && (
+                          <img
+                            src={b.coverImageUrl}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs font-semibold text-slate-500 truncate max-w-[140px]">
+                            {b.author}
+                          </p>
+                          <span
+                            className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${statusBadge}`}
+                          >
+                            {b.status}
+                          </span>
+                        </div>
+                        <p className="text-sm font-bold line-clamp-2 mb-1">
+                          {b.title}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          Bu dönemde:{" "}
+                          <span className="font-semibold text-slate-800 dark:text-slate-100">
+                            {item.pages.toLocaleString()} sf
+                          </span>{" "}
+                          • {formatDuration(item.minutes)}
+                        </p>
+                        {b.totalPages && (
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Toplam ilerleme:{" "}
+                            <span className="font-semibold">
+                              {b.pagesRead || 0} / {b.totalPages} sf
+                            </span>
+                          </p>
+                        )}
+                        <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 mt-1 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* DEVAM EDEN KİTAPLAR & TAHMİNLER */}
           {stats.inProgressForecasts.length > 0 && (

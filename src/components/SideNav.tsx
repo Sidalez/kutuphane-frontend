@@ -19,6 +19,11 @@ const navItems = [
   { to: "/profile", label: "Profilim", icon: UserCircle2 },
 ];
 
+const mediaNavItems = [
+  { to: "/media", label: "Film & Dizilerim", icon: LibraryBig },
+  { to: "/add-media", label: "Film / Dizi Ekle", icon: PlusSquare },
+];
+
 interface SideNavProps {
   isOpen: boolean;
   onClose: () => void;
@@ -54,6 +59,7 @@ export default function SideNav({ isOpen, onClose }: SideNavProps) {
           <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500 font-semibold">
             Kitap Modülü
           </p>
+
 
           {/* Mobilde kapanma butonu */}
           <button
