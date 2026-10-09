@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+.book-genre-rail { scrollbar-width: none; }
+.book-genre-rail::-webkit-scrollbar { display: none; }
+
 /* index.css içine */
 
 .input {
