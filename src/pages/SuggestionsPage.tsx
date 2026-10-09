@@ -630,7 +630,7 @@ Favori kategoriler: ${
       setAiResult(data.text || "Herhangi bir öneri üretilemedi.");
     } catch (err: any) {
       console.error(err);
-      setAiError(err.message || "Öneriler alınırken bir hata oluştu.");
+      setAiError(err.response?.data?.message || err.message || "Öneriler alınırken bir hata oluştu.");
     } finally {
       setAiLoading(false);
     }
