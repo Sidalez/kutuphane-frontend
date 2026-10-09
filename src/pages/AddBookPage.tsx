@@ -24,9 +24,11 @@ import { useAuth } from "../auth/AuthContext";
 import type { BookStatus } from "../types/book";
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { API_BASE_URL } from "../apiClient";
-interface AIBookResponse {
+interface IsbnBookResponse {
   found: boolean;
   message?: string;
+  editionSources?: string[];
+  missingFields?: string[];
   title?: string;
   author?: string;
   publisher?: string;
@@ -34,7 +36,7 @@ interface AIBookResponse {
   publishedDate?: string;
   description?: string;
   coverImageUrl?: string | null;
-  categories?: string[]; // 🔥 YENİ: AI'den gelecek kategoriler
+  categories?: string[]; // İnternet kaynaklarından bulunan kategoriler
 }
 
 const toTitleCase = (value: string) =>
@@ -91,6 +93,7 @@ export default function AddBookPage() {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchInfo, setSearchInfo] = useState<string | null>(null);
+  const [searchSources, setSearchSources] = useState<string[]>([]);
   // 📷 Kamera ile barkod tarama
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
@@ -154,6 +157,7 @@ export default function AddBookPage() {
 
     setSearchError(null);
     setSearchInfo(null);
+    setSearchSources([]);
     setSearching(true);
 
     try {
@@ -163,8 +167,8 @@ export default function AddBookPage() {
         body: JSON.stringify({ isbn: trimmed }),
       });
 
-      const response: { success: boolean; data?: AIBookResponse; message?: string } = await res.json();
-      const data: AIBookResponse = response.data ?? { found: false, message: response.message };
+      const response: { success: boolean; data?: IsbnBookResponse; message?: string } = await res.json();
+      const data: IsbnBookResponse = response.data ?? { found: false, message: response.message };
 
       if (!res.ok || !data.found) {
         setSearchError(
@@ -175,20 +179,21 @@ export default function AddBookPage() {
       }
 
       setSearchInfo(
-        "Kitap bilgileri yapay zekâ ile dolduruldu. Gerekirse alanları düzenleyebilirsin."
+        data.missingFields?.length
+          ? `ISBN ile eşleşen internet kaynaklarından bilgiler alındı. Doğrulanamayan alanlar: ${data.missingFields.join(", ")}.`
+          : "Yazar, yayınevi ve sayfa sayısı ISBN ile eşleşen farklı internet kaynaklarından doğrulandı."
       );
 
-      if (data.title) setTitle(data.title);
-      if (data.author) setAuthor(data.author);
-      if (data.publisher) setPublisher(data.publisher);
-      if (data.publishedDate) setPublishedDate(data.publishedDate);
-      if (typeof data.pageCount === "number" && !Number.isNaN(data.pageCount)) {
-        setTotalPages(data.pageCount);
-      }
-      if (data.description) setDescription(data.description);
+      setSearchSources(data.editionSources || []);
+      setTitle(data.title || "");
+      setAuthor(data.author || "");
+      setPublisher(data.publisher || "");
+      setPublishedDate(data.publishedDate || "");
+      setTotalPages(typeof data.pageCount === "number" ? data.pageCount : undefined);
+      setDescription(data.description || "");
       if (data.coverImageUrl) setCoverImageUrl(data.coverImageUrl);
 
-      // 🔥 AI'den gelen kategorileri de doldur
+      // Kaynaklardan bulunan kategorileri doldur
       if (Array.isArray(data.categories) && data.categories.length > 0) {
         const normalized = data.categories
           .filter((c): c is string => typeof c === "string" && c.trim() !== "")
@@ -201,7 +206,7 @@ export default function AddBookPage() {
         });
       }
     } catch (err) {
-      console.error("AI ISBN arama hatası:", err);
+      console.error("ISBN kaynak arama hatası:", err);
       setSearchError(
         "Bir hata oluştu. Daha sonra tekrar dene veya bilgileri manuel doldur."
       );
@@ -362,7 +367,7 @@ export default function AddBookPage() {
 
         <div className="inline-flex items-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-primary dark:border-primary/40 dark:bg-primary/10">
           <Sparkles className="w-3 h-3" />
-          <span>Yapay zekâ ile kitap bilgisi doldurma aktif</span>
+          <span>ISBN ile internetten kitap bilgisi bulma aktif</span>
         </div>
       </div>
 
@@ -436,7 +441,7 @@ export default function AddBookPage() {
         {searchInfo && !searchError && (
           <div className="mt-2 inline-flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100">
             <Sparkles className="mt-[2px] w-3.5 h-3.5" />
-            <p>{searchInfo}</p>
+            <div><p>{searchInfo}</p>{searchSources.length > 0 && <div className="mt-2 flex flex-wrap gap-3">{searchSources.map((url, index) => <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">Kaynak {index + 1}</a>)}</div>}</div>
           </div>
         )}
       </section>
