@@ -5,6 +5,10 @@
 .book-genre-rail { scrollbar-width: none; }
 .book-genre-rail::-webkit-scrollbar { display: none; }
 
+.book-discovery { font-family: "Manrope", sans-serif; }
+.book-discovery .font-serif { font-family: "Lora", Georgia, serif; }
+.book-discovery button, .book-discovery a, .book-discovery input, .book-discovery select, .book-discovery textarea { font-family: inherit; }
+
 /* index.css içine */
 
 .input {

@@ -12,7 +12,7 @@ type RecommendGoal = "choose_library_book" | "choose_new_book";
 
 interface AiResponse {
   text: string;
-  books?: Array<{ title: string; author: string; genre: string; summary: string; reason: string; coverImageUrl?: string }>;
+  books?: Array<{ title: string; author: string; genre: string; summary: string; reason: string; coverImageUrl?: string; publisher?: string | null; pageCount?: number | null; publishYear?: string | null; isbn?: string | null; editionSource?: string }>;
 }
 
 type AiSection = {
@@ -599,6 +599,8 @@ Favori kategoriler: ${
           id: b.id,
           title: b.title,
           author: b.author,
+          publisher: b.publisher || null,
+          publishYear: b.publishYear || null,
           isbn: b.isbn || null,
           status: b.status,
           totalPages: b.totalPages || null,

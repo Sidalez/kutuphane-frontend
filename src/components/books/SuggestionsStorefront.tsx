@@ -2,8 +2,18 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowDown, ArrowRight, BookOpen, Check, ChevronDown, Clock, Heart, Loader2, Search, ShoppingBag, SlidersHorizontal, Sparkles, X, AlertCircle } from "lucide-react";
 import type { Book } from "../../types/book";
+import "@fontsource/manrope/latin-400.css";
+import "@fontsource/manrope/latin-ext-400.css";
+import "@fontsource/manrope/latin-600.css";
+import "@fontsource/manrope/latin-ext-600.css";
+import "@fontsource/manrope/latin-700.css";
+import "@fontsource/manrope/latin-ext-700.css";
+import "@fontsource/lora/latin-400.css";
+import "@fontsource/lora/latin-ext-400.css";
+import "@fontsource/lora/latin-500-italic.css";
+import "@fontsource/lora/latin-ext-500-italic.css";
 
-type Suggestion = { title: string; author: string; genre: string; summary: string; reason: string; coverImageUrl?: string };
+type Suggestion = { title: string; author: string; genre: string; summary: string; reason: string; coverImageUrl?: string; publisher?: string | null; pageCount?: number | string | null; publishYear?: string | null; isbn?: string | null; editionSource?: string; editionSources?: string[] };
 type Goal = "choose_library_book" | "choose_new_book";
 type Props = {
   books: Book[]; suggestions: Suggestion[]; loadingBooks: boolean; loading: boolean;
@@ -34,6 +44,11 @@ function Cover({ title, author, url, index = 0, className = "" }: { title: strin
 function BookTile({ item, index, libraryBook, saved, onSave }: { item: Suggestion; index: number; libraryBook?: Book; saved: boolean; onSave: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const query = encodeURIComponent(`${item.title} ${item.author}`);
+  const publisher = libraryBook?.publisher || item.publisher;
+  const pageCount = libraryBook?.totalPages || item.pageCount;
+  const year = libraryBook?.publishYear || item.publishYear;
+  const isbn = libraryBook?.isbn || item.isbn;
+  const known = (value: unknown) => value && !["Bilinmiyor", "Belirtilmemiş"].includes(String(value)) ? String(value) : "Henüz doğrulanmadı";
   return <article className="group overflow-hidden rounded-[22px] border border-[#e9e3d9] bg-white transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(61,43,20,.08)] dark:border-slate-800 dark:bg-slate-900">
     <div className="relative flex h-64 items-center justify-center overflow-hidden bg-[#f1eee6] dark:bg-slate-800/70 sm:h-72">
       <div className="absolute inset-x-10 bottom-6 h-6 rounded-[50%] bg-[#9e8563]/15 blur-xl" />
@@ -44,12 +59,19 @@ function BookTile({ item, index, libraryBook, saved, onSave }: { item: Suggestio
     <div className="p-5">
       <p className="mb-2 truncate text-[10px] font-bold uppercase tracking-[.14em] text-primary">{item.genre || "Edebiyat"}</p>
       <h3 className="line-clamp-2 min-h-12 font-serif text-[21px] leading-6 tracking-tight text-[#2c3029] dark:text-slate-50">{item.title}</h3>
-      <p className="mt-1 truncate text-xs text-stone-500 dark:text-slate-400">{item.author}</p>
+      <p className="mt-2 truncate text-[13px] font-semibold text-stone-600 dark:text-slate-300"><span className="mr-1 font-normal text-stone-400">Yazar</span> {item.author || "Belirtilmemiş"}</p>
+      <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 border-y border-stone-100 py-4 dark:border-slate-800">
+        <div className="col-span-2"><dt className="text-[9px] font-semibold uppercase tracking-[.12em] text-stone-400">Yayınevi</dt><dd className="mt-1 text-xs font-semibold text-stone-700 dark:text-slate-200">{known(publisher)}</dd></div>
+        <div><dt className="text-[9px] font-semibold uppercase tracking-[.12em] text-stone-400">Sayfa sayısı</dt><dd className="mt-1 text-xs font-semibold text-stone-700 dark:text-slate-200">{known(pageCount)}{pageCount && known(pageCount) !== "Henüz doğrulanmadı" ? " sayfa" : ""}</dd></div>
+        <div><dt className="text-[9px] font-semibold uppercase tracking-[.12em] text-stone-400">Yayın yılı</dt><dd className="mt-1 text-xs font-semibold text-stone-700 dark:text-slate-200">{known(year)}</dd></div>
+      </dl>
+      {!libraryBook && item.editionSource && <a href={item.editionSource} target="_blank" rel="noopener noreferrer" className="mt-2 block text-[10px] text-stone-400 underline decoration-stone-300 underline-offset-4 hover:text-primary">Bu baskının kaynağı{isbn ? ` · ${isbn}` : ""}</a>}
       <div className="mt-4 rounded-xl bg-[#f8f7f2] p-3 dark:bg-slate-800/70">
         <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold text-[#65745a] dark:text-emerald-300"><Sparkles className="h-3 w-3" />Neden sana uygun?</p>
         <p className={`${expanded ? "" : "line-clamp-3"} min-h-[54px] text-[11px] leading-[18px] text-stone-600 dark:text-slate-300`}>{item.reason}</p>
       </div>
       {expanded && item.summary && <p className="mt-3 text-xs leading-relaxed text-stone-600 dark:text-slate-300">{item.summary}</p>}
+      {expanded && item.editionSources && <div className="mt-3 flex flex-wrap gap-3">{[...new Set(item.editionSources)].map((source, sourceIndex) => <a key={source} href={source} target="_blank" rel="noopener noreferrer" className="text-[10px] text-stone-500 underline underline-offset-4">Baskı kaynağı {sourceIndex + 1}</a>)}</div>}
       <button type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} className="my-3 flex min-h-9 items-center gap-1 text-[11px] font-semibold text-stone-500 hover:text-primary">{expanded ? "Daha az göster" : "Kitabı tanı"}<ChevronDown className={`h-3 w-3 transition ${expanded ? "rotate-180" : ""}`} /></button>
       {libraryBook ? <Link to={`/library/${libraryBook.id}`} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#283e33] text-xs font-semibold text-white hover:bg-[#365541]">Kitabına git<ArrowRight className="h-3.5 w-3.5" /></Link> : <a href={`https://www.kitapyurdu.com/index.php?route=product/search&filter_name=${query}`} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#283e33] text-xs font-semibold text-white hover:bg-[#365541]">Kitapçıda ara<ArrowRight className="h-3.5 w-3.5" /></a>}
       {!libraryBook && <a href={`https://www.google.com/search?tbm=shop&q=${query}`} target="_blank" rel="noopener noreferrer" className="mt-2 flex min-h-8 items-center justify-center gap-1 text-[10px] text-stone-500 hover:text-primary">Diğer mağazalarda ara<ShoppingBag className="h-3 w-3" /></a>}
@@ -76,7 +98,7 @@ export default function SuggestionsStorefront(props: Props) {
   };
   const profile = props.sections.find(section => section.title === "Kısa Profil Özeti")?.items[0];
   const emptyMessage = props.sections.find(section => section.title === "Öneri Stratejisi")?.items[0];
-  return <div className="mx-auto max-w-[1280px] space-y-8 pb-6 text-[#30352e] dark:text-slate-100">
+  return <div className="book-discovery mx-auto max-w-[1280px] space-y-8 pb-6 text-[#30352e] dark:text-slate-100">
     <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
       <div><p className="text-[9px] font-bold uppercase tracking-[.24em] text-primary">KÜTÜPHANEM / KEŞİF</p><p className="mt-1 font-serif text-xl">Bir sonraki güzel hikâyen.</p></div>
       <button type="button" onClick={() => setOnlySaved(!onlySaved)} aria-pressed={onlySaved} className={`flex min-h-11 items-center gap-2 rounded-full border px-4 text-xs font-semibold ${onlySaved ? "border-primary bg-orange-50 text-primary dark:bg-orange-950/30" : "border-[#e4ded2] bg-white/70 dark:border-slate-700 dark:bg-slate-900"}`}><Heart className="h-3.5 w-3.5" />Bu oturumdaki listem<span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f1eee6] text-[10px] text-stone-600">{saved.size}</span></button>
