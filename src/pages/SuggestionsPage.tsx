@@ -12,7 +12,7 @@ type RecommendGoal = "choose_library_book" | "choose_new_book";
 
 interface AiResponse {
   text: string;
-  books?: Array<{ title: string; author: string; genre: string; summary: string; reason: string; coverImageUrl?: string; publisher?: string | null; pageCount?: number | null; publishYear?: string | null; isbn?: string | null; editionSource?: string }>;
+  books?: Array<{ title: string; author: string; genre: string; summary: string; reason: string; coverImageUrl?: string; publisher?: string | null; pageCount?: number | null; publishYear?: string | null; isbn?: string | null; editionSource?: string; editionSources?: string[] }>;
 }
 
 type AiSection = {
