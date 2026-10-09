@@ -227,11 +227,11 @@ const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
     try {
       setSaving(true);
-      const res = await api.post("/api/books/ai", {
+      const res = await api.post("/api/books/isbn", {
         isbn: form.isbn.trim(),
       });
 
-      const data = res.data;
+      const data = res.data.data;
 
       if (!res.status || res.status >= 400 || data.found === false) {
         showToast(

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase/firebase";
-import axios from "axios";
+import { api } from "../apiClient";
 import type { Book } from "../types/book";
 
 export function useBookEdit(initial: Book | null, onSaved?: (b: Book) => void) {
@@ -19,12 +19,12 @@ const autoFillFromAI = async () => {
 
   setLoading(true);
   try {
-    const res = await axios.post(
-      "http://localhost:3001/api/books/ai",
+    const res = await api.post(
+      "/api/books/isbn",
       { isbn: form.isbn }
     );
 
-    const data = res.data;
+    const data = res.data.data;
 
     setForm((prev: any) => ({
       ...prev,

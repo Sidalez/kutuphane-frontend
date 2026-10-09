@@ -23,6 +23,7 @@ import { db } from "../firebase/firebase";
 import { useAuth } from "../auth/AuthContext";
 import type { BookStatus } from "../types/book";
 import { Scanner } from "@yudiel/react-qr-scanner";
+import { API_BASE_URL } from "../apiClient";
 interface AIBookResponse {
   found: boolean;
   message?: string;
@@ -156,13 +157,14 @@ export default function AddBookPage() {
     setSearching(true);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/books/ai`, {
+      const res = await fetch(`${API_BASE_URL}/api/books/isbn`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isbn: trimmed }),
       });
 
-      const data: AIBookResponse = await res.json();
+      const response: { success: boolean; data?: AIBookResponse; message?: string } = await res.json();
+      const data: AIBookResponse = response.data ?? { found: false, message: response.message };
 
       if (!res.ok || !data.found) {
         setSearchError(

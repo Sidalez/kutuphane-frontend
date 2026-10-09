@@ -21,7 +21,7 @@ const isMediaModule = location.pathname.startsWith("/media") ||
                       location.pathname.startsWith("/add-media");
 
   return (
-    <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-slate-200/80 dark:border-slate-800/80 bg-gradient-to-r from-orange-50/90 via-white/90 to-slate-50/90 dark:from-slate-950/90 dark:via-slate-900/90 dark:to-slate-950/90 backdrop-blur-md shadow-sm">
+    <header className="sticky top-0 z-20 h-16 shrink-0 flex items-center justify-between px-4 lg:px-8 border-b border-slate-200/60 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl">
       {/* Sol logo alanı */}
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-md shadow-orange-200/70 dark:shadow-orange-900/40">
@@ -31,7 +31,7 @@ const isMediaModule = location.pathname.startsWith("/media") ||
           <span className="font-bold text-[15px] tracking-tight text-slate-900 dark:text-slate-50">
             Kütüphanem
           </span>
-          <span className="text-[12px] font-medium text-slate-600 dark:text-slate-400">
+          <span className="hidden md:block text-[12px] font-medium text-slate-600 dark:text-slate-400">
             Kişisel kitap &amp; medya panon
           </span>
         </div>
@@ -68,7 +68,7 @@ const isMediaModule = location.pathname.startsWith("/media") ||
 
 
       {/* Sağ taraf: tema + kullanıcı */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 md:gap-3">
         {/* Tema butonu */}
         <button
           onClick={toggleTheme}
@@ -90,6 +90,7 @@ const isMediaModule = location.pathname.startsWith("/media") ||
             {/* Avatar + isim: profili açar */}
             <button
               onClick={() => navigate("/profile")}
+              aria-label="Profilimi aç"
               className="flex items-center gap-2 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-700 rounded-full pl-1.5 pr-3 py-1 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/90 to-orange-500/90 text-xs flex items-center justify-center font-semibold text-white overflow-hidden">
@@ -116,10 +117,11 @@ const isMediaModule = location.pathname.startsWith("/media") ||
             {/* Çıkış butonu */}
             <button
               onClick={logout}
-              className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 text-white text-[11px] font-semibold px-3 py-1.5 shadow-sm hover:brightness-110 dark:bg-slate-100 dark:text-slate-900 transition"
+              aria-label="Çıkış yap"
+              className="inline-flex h-9 w-9 md:w-auto items-center justify-center gap-1.5 rounded-full bg-slate-900 text-white text-[11px] font-semibold md:px-3 shadow-sm hover:brightness-110 dark:bg-slate-100 dark:text-slate-900 transition"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>Çıkış</span>
+              <span className="hidden md:inline">Çıkış</span>
             </button>
           </div>
         ) : (
