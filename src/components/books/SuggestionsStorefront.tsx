@@ -2,16 +2,6 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowDown, ArrowRight, BookOpen, Check, ChevronDown, Clock, Heart, Loader2, Search, ShoppingBag, SlidersHorizontal, Sparkles, X, AlertCircle } from "lucide-react";
 import type { Book } from "../../types/book";
-import "@fontsource/manrope/latin-400.css";
-import "@fontsource/manrope/latin-ext-400.css";
-import "@fontsource/manrope/latin-600.css";
-import "@fontsource/manrope/latin-ext-600.css";
-import "@fontsource/manrope/latin-700.css";
-import "@fontsource/manrope/latin-ext-700.css";
-import "@fontsource/lora/latin-400.css";
-import "@fontsource/lora/latin-ext-400.css";
-import "@fontsource/lora/latin-500-italic.css";
-import "@fontsource/lora/latin-ext-500-italic.css";
 
 type Suggestion = { title: string; author: string; genre: string; summary: string; reason: string; coverImageUrl?: string; publisher?: string | null; pageCount?: number | string | null; publishYear?: string | null; isbn?: string | null; editionSource?: string; editionSources?: string[] };
 type Goal = "choose_library_book" | "choose_new_book";
@@ -33,7 +23,7 @@ function Cover({ title, author, url, index = 0, className = "" }: { title: strin
   return <div className={`relative aspect-[2/3] overflow-hidden rounded-r-lg rounded-l-sm shadow-[6px_10px_18px_rgba(35,27,18,.18)] ${palettes[index % palettes.length]} ${className}`}>
     <div className="absolute inset-0 flex flex-col items-center justify-between px-[12%] py-[15%] text-center">
       <span className="text-[8px] uppercase tracking-[.22em] opacity-70">OKUMA LİSTESİ</span>
-      <span className="font-serif text-[clamp(14px,2vw,24px)] font-medium leading-tight">{title}</span>
+      <span className="font-semibold text-[clamp(14px,2vw,24px)] font-medium leading-tight">{title}</span>
       <span className="text-[9px] uppercase tracking-wider">{author}</span>
     </div>
     {url && failedUrl !== url && <img src={url} alt={`${title} kitap kapağı`} loading="lazy" className="absolute inset-0 h-full w-full object-cover" onError={() => setFailedUrl(url)} />}
@@ -59,7 +49,7 @@ function BookTile({ item, index, libraryBook, saved, onSave }: { item: Suggestio
     </div>
     <div className="p-5">
       <p className="mb-2 truncate text-[10px] font-bold uppercase tracking-[.14em] text-primary">{item.genre || "Edebiyat"}</p>
-      <h3 className="line-clamp-2 min-h-12 font-serif text-[21px] leading-6 tracking-tight text-[#2c3029] dark:text-slate-50">{item.title}</h3>
+      <h3 className="line-clamp-2 min-h-12 text-lg font-semibold leading-6 tracking-tight text-[#2c3029] dark:text-slate-50">{item.title}</h3>
       <p className="mt-2 truncate text-[13px] font-semibold text-stone-600 dark:text-slate-300"><span className="mr-1 font-normal text-stone-400">Yazar</span> {item.author || "Belirtilmemiş"}</p>
       <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 border-y border-stone-100 py-4 dark:border-slate-800">
         <div className="col-span-2"><dt className="text-[9px] font-semibold uppercase tracking-[.12em] text-stone-400">Yayınevi</dt><dd className="mt-1 text-xs font-semibold text-stone-700 dark:text-slate-200">{known(publisher)}</dd></div>
@@ -102,7 +92,7 @@ export default function SuggestionsStorefront(props: Props) {
   const emptyMessage = props.sections.find(section => section.title === "Öneri Stratejisi")?.items[0];
   return <div className="book-discovery mx-auto max-w-[1280px] space-y-8 pb-6 text-[#30352e] dark:text-slate-100">
     <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-      <div><p className="text-[9px] font-bold uppercase tracking-[.24em] text-primary">KÜTÜPHANEM / KEŞİF</p><p className="mt-1 font-serif text-xl">Bir sonraki güzel hikâyen.</p></div>
+      <div><p className="text-xs font-medium text-primary">KÜTÜPHANEM / KEŞİF</p><p className="mt-1 font-semibold text-xl">Bir sonraki güzel hikâyen.</p></div>
       <button type="button" onClick={() => setOnlySaved(!onlySaved)} aria-pressed={onlySaved} className={`flex min-h-11 items-center gap-2 rounded-full border px-4 text-xs font-semibold ${onlySaved ? "border-primary bg-orange-50 text-primary dark:bg-orange-950/30" : "border-[#e4ded2] bg-white/70 dark:border-slate-700 dark:bg-slate-900"}`}><Heart className="h-3.5 w-3.5" />Bu oturumdaki listem<span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f1eee6] text-[10px] text-stone-600">{saved.size}</span></button>
     </div>
 
@@ -111,7 +101,7 @@ export default function SuggestionsStorefront(props: Props) {
       <div className="relative grid items-center gap-4 px-6 py-9 sm:px-10 md:grid-cols-[1.15fr_1fr] lg:px-12 lg:py-12">
         <div className="relative z-10 max-w-xl">
           <span className="inline-flex items-center gap-2 rounded-full border border-[#c9ceb7] bg-white/40 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[.13em] dark:border-emerald-800 dark:bg-emerald-950/40"><Sparkles className="h-3 w-3 text-primary" />Sana özel kitap keşfi</span>
-          <h1 className="mt-5 font-serif text-[38px] font-normal leading-[1.08] tracking-[-.035em] sm:text-[44px] xl:text-[60px]">Bazı kitaplar<br />tam da <span className="italic text-[#71805a] dark:text-[#b5c796]">seni bekler.</span></h1>
+          <h1 className="mt-3 text-2xl font-semibold leading-tight tracking-tight md:text-3xl">Bazı kitaplar<br />tam da <span className="text-[#71805a] dark:text-[#b5c796]">seni bekler.</span></h1>
           <p className="mt-5 max-w-sm text-[13px] leading-6 text-[#777c69] dark:text-slate-300">Ruh haline, sevdiğin hikâyelere ve okuma zevkine göre seçilen kitaplarla bir sonraki favorini keşfet.</p>
           <a href="#discovery-controls" className="mt-6 inline-flex min-h-11 items-center gap-3 rounded-full bg-[#293e32] px-5 text-xs font-semibold text-white transition hover:bg-[#405b45] dark:bg-[#d6dfc0] dark:text-[#26382e]">Yeni bir hikâye bul<ArrowDown className="h-3.5 w-3.5" /></a>
           <div className="mt-6 flex items-center gap-2 text-[10px] text-[#777c69] dark:text-slate-400"><BookOpen className="h-3.5 w-3.5" />Senin zevkin. Senin sıradaki kitabın.</div>
@@ -124,7 +114,7 @@ export default function SuggestionsStorefront(props: Props) {
     </section>
 
     <section id="discovery-controls" className="scroll-mt-24 space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="mb-1 text-[9px] font-bold uppercase tracking-[.2em] text-primary">KÜÇÜK BİR İPUCU VER</p><h2 className="font-serif text-[27px] font-normal tracking-tight">Bugün ne okumak istersin?</h2></div><button type="button" onClick={() => setShowFilters(!showFilters)} aria-expanded={showFilters} aria-controls="reading-preferences" className="flex min-h-10 items-center gap-2 text-xs font-semibold text-stone-500 dark:text-slate-400"><SlidersHorizontal className="h-3.5 w-3.5" />Tercihler<ChevronDown className={`h-3 w-3 transition ${showFilters ? "rotate-180" : ""}`} /></button></div>
+      <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="mb-1 text-xs font-medium text-primary">KÜÇÜK BİR İPUCU VER</p><h2 className="text-xl font-semibold tracking-tight md:text-2xl">Bugün ne okumak istersin?</h2></div><button type="button" onClick={() => setShowFilters(!showFilters)} aria-expanded={showFilters} aria-controls="reading-preferences" className="flex min-h-10 items-center gap-2 text-xs font-semibold text-stone-500 dark:text-slate-400"><SlidersHorizontal className="h-3.5 w-3.5" />Tercihler<ChevronDown className={`h-3 w-3 transition ${showFilters ? "rotate-180" : ""}`} /></button></div>
       <div className="book-genre-rail flex gap-2 overflow-x-auto pb-2" aria-label="Kitap türü tercihi">{genres.map(value => <button key={value} type="button" onClick={() => chooseGenre(value)} aria-pressed={genre === value} className={`min-h-10 shrink-0 rounded-full border px-4 text-[11px] font-semibold transition ${genre === value ? "border-[#293e32] bg-[#293e32] text-white dark:border-[#d6dfc0] dark:bg-[#d6dfc0] dark:text-slate-900" : "border-[#e7e1d6] bg-white text-stone-500 hover:border-stone-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}>{value}</button>)}</div>
       {showFilters && <div id="reading-preferences" className="grid gap-5 rounded-[22px] border border-[#e8e2d6] bg-white p-5 dark:border-slate-800 dark:bg-slate-900 lg:grid-cols-[1fr_1.2fr] lg:p-6">
         <div className="space-y-4"><div className="grid grid-cols-2 gap-2 rounded-xl bg-[#f5f3ed] p-1 dark:bg-slate-800">{([['choose_new_book', 'Yeni kitap keşfet', ShoppingBag], ['choose_library_book', 'Rafımdan seç', BookOpen]] as const).map(([value, label, Icon]) => <button key={value} type="button" onClick={() => props.onGoalChange(value)} aria-pressed={props.goal === value} className={`flex min-h-11 items-center justify-center gap-2 rounded-lg px-2 text-[11px] font-semibold ${props.goal === value ? "bg-white text-primary shadow-sm dark:bg-slate-700" : "text-stone-500 dark:text-slate-400"}`}><Icon className="h-3.5 w-3.5" />{label}</button>)}</div>
@@ -135,11 +125,11 @@ export default function SuggestionsStorefront(props: Props) {
     </section>
 
     <section aria-live="polite" aria-busy={props.loading || props.loadingBooks} className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="mb-1 text-[9px] font-bold uppercase tracking-[.2em] text-primary">{onlySaved ? "AKLINDA KALSIN" : props.result ? "SENİN İÇİN SEÇİLDİ" : "KENDİ RAFINDA BİR KEŞİF"}</p><h2 className="font-serif text-[28px] font-normal tracking-tight">{onlySaved ? "Göz koydukların" : props.result ? "Sıradaki favorin burada olabilir." : "Rafından ilham al."}</h2></div><span className="text-[10px] text-stone-500">{visible.length} kitap{onlySaved && <button type="button" aria-label="Liste filtresini kapat" onClick={() => setOnlySaved(false)} className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-stone-200"><X className="h-3 w-3" /></button>}</span></div>
+      <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="mb-1 text-xs font-medium text-primary">{onlySaved ? "AKLINDA KALSIN" : props.result ? "SENİN İÇİN SEÇİLDİ" : "KENDİ RAFINDA BİR KEŞİF"}</p><h2 className="text-xl font-semibold tracking-tight md:text-2xl">{onlySaved ? "Göz koydukların" : props.result ? "Sıradaki favorin burada olabilir." : "Rafından ilham al."}</h2></div><span className="text-[10px] text-stone-500">{visible.length} kitap{onlySaved && <button type="button" aria-label="Liste filtresini kapat" onClick={() => setOnlySaved(false)} className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-stone-200"><X className="h-3 w-3" /></button>}</span></div>
       {props.error && <div role="alert" className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs leading-5 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200"><AlertCircle className="h-4 w-4 shrink-0" /><div><p className="font-semibold">Kitaplar şu an seçilemedi.</p><p>{props.error}</p></div></div>}
       {props.loading || props.loadingBooks ? <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map(index => <div key={index} className="overflow-hidden rounded-[22px] border border-stone-200 dark:border-slate-800"><div className="flex h-64 items-center justify-center bg-stone-100 dark:bg-slate-800"><div className="h-44 w-28 animate-pulse rounded bg-stone-200 dark:bg-slate-700" /></div><div className="space-y-3 p-5"><div className="h-4 w-2/3 animate-pulse rounded bg-stone-200 dark:bg-slate-700" /><div className="h-3 w-1/2 animate-pulse rounded bg-stone-100 dark:bg-slate-800" /><p className="pt-4 text-[11px] text-stone-500">Kitapları ve baskı bilgilerini araştırıyoruz…</p></div></div>)}</div> : <>
         {props.result && profile && !onlySaved && <div className="flex gap-3 rounded-2xl bg-[#eeefe5] p-4 dark:bg-emerald-950/30"><Sparkles className="mt-1 h-4 w-4 shrink-0 text-[#71805a]" /><p className="text-xs leading-6 text-[#68705b] dark:text-emerald-200">{profile}</p></div>}
-        {visible.length > 0 ? <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{visible.map((item, index) => <BookTile key={keyOf(item)} item={item} index={index} libraryBook={props.books.find(book => book.title.toLocaleLowerCase("tr-TR") === item.title.toLocaleLowerCase("tr-TR") && (book.author || "").toLocaleLowerCase("tr-TR") === item.author.toLocaleLowerCase("tr-TR"))} saved={saved.has(keyOf(item))} onSave={() => toggleSaved(item)} />)}</div> : <div className="flex flex-col items-center rounded-[22px] border border-dashed border-[#d9d5c8] px-6 py-12 text-center dark:border-slate-700"><div className="mb-4 rounded-full bg-[#eeefe5] p-4 dark:bg-slate-800">{onlySaved ? <Heart className="h-6 w-6 text-primary" /> : <Search className="h-6 w-6 text-[#71805a]" />}</div><h3 className="font-serif text-xl">{onlySaved ? "Bir kitap kalbine dokunsun." : "Güzel bir keşifle başlayalım."}</h3><p className="mt-3 max-w-sm text-xs leading-6 text-stone-500">{onlySaved ? "Beğendiğin kitapların kalbine dokun; bu oturumda burada bir araya gelsinler." : props.result ? emptyMessage || "Tercihlerini değiştirerek yeni kitaplar keşfedebilirsin." : "Yukarıdan sevdiğin türü seç, nasıl bir hikâye aradığını anlat. Sana özel önerileri birlikte bulalım."}</p></div>}
+        {visible.length > 0 ? <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{visible.map((item, index) => <BookTile key={keyOf(item)} item={item} index={index} libraryBook={props.books.find(book => book.title.toLocaleLowerCase("tr-TR") === item.title.toLocaleLowerCase("tr-TR") && (book.author || "").toLocaleLowerCase("tr-TR") === item.author.toLocaleLowerCase("tr-TR"))} saved={saved.has(keyOf(item))} onSave={() => toggleSaved(item)} />)}</div> : <div className="flex flex-col items-center rounded-[22px] border border-dashed border-[#d9d5c8] px-6 py-12 text-center dark:border-slate-700"><div className="mb-4 rounded-full bg-[#eeefe5] p-4 dark:bg-slate-800">{onlySaved ? <Heart className="h-6 w-6 text-primary" /> : <Search className="h-6 w-6 text-[#71805a]" />}</div><h3 className="font-semibold text-xl">{onlySaved ? "Bir kitap kalbine dokunsun." : "Güzel bir keşifle başlayalım."}</h3><p className="mt-3 max-w-sm text-xs leading-6 text-stone-500">{onlySaved ? "Beğendiğin kitapların kalbine dokun; bu oturumda burada bir araya gelsinler." : props.result ? emptyMessage || "Tercihlerini değiştirerek yeni kitaplar keşfedebilirsin." : "Yukarıdan sevdiğin türü seç, nasıl bir hikâye aradığını anlat. Sana özel önerileri birlikte bulalım."}</p></div>}
       </>}
     </section>
     <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e6e1d6] pt-5 text-[10px] leading-5 text-stone-400 dark:border-slate-800"><span className="flex items-center gap-1.5"><Check className="h-3 w-3" />Öneriler senin tercihlerine göre hazırlanır.</span><span>Satın alma bağlantıları mağaza aramasını açar; fiyat ve stok mağazada gösterilir.</span></footer>
