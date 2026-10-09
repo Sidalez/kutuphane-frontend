@@ -179,7 +179,7 @@ export default function AddBookPage() {
       setSearchInfo(
         data.missingFields?.length
           ? `ISBN ile eşleşen internet kaynaklarından bilgiler alındı. Doğrulanamayan alanlar: ${data.missingFields.join(", ")}.`
-          : "Yazar, yayınevi ve sayfa sayısı ISBN ile eşleşen farklı internet kaynaklarından doğrulandı."
+          : "Kitap bilgileri ISBN ile eşleşen internet kaynaklarından alındı."
       );
 
       setTitle(data.title || "");
