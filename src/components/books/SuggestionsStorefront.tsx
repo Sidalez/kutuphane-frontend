@@ -47,7 +47,8 @@ function BookTile({ item, index, libraryBook, saved, onSave }: { item: Suggestio
   const pageCount = libraryBook?.totalPages || item.pageCount;
   const year = libraryBook?.publishYear || item.publishYear;
   const isbn = libraryBook?.isbn || item.isbn;
-  const query = encodeURIComponent(isbn || `${item.title} ${item.author}`);
+  const bookshopQuery = encodeURIComponent(item.title.replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim());
+  const storesQuery = encodeURIComponent(`${item.title} ${item.author} kitap satın al`);
   const known = (value: unknown) => value && !["Bilinmiyor", "Belirtilmemiş"].includes(String(value)) ? String(value) : "Henüz doğrulanmadı";
   return <article className="group overflow-hidden rounded-[22px] border border-[#e9e3d9] bg-white transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(61,43,20,.08)] dark:border-slate-800 dark:bg-slate-900">
     <div className="relative flex h-64 items-center justify-center overflow-hidden bg-[#f1eee6] dark:bg-slate-800/70 sm:h-72">
@@ -74,8 +75,8 @@ function BookTile({ item, index, libraryBook, saved, onSave }: { item: Suggestio
       {expanded && item.summary && <p className="mt-3 text-xs leading-relaxed text-stone-600 dark:text-slate-300">{item.summary}</p>}
       {expanded && item.editionSources && <div className="mt-3 flex flex-wrap gap-3">{[...new Set(item.editionSources)].map((source, sourceIndex) => <a key={source} href={source} target="_blank" rel="noopener noreferrer" className="text-[10px] text-stone-500 underline underline-offset-4">Baskı kaynağı {sourceIndex + 1}</a>)}</div>}
       <button type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} className="my-3 flex min-h-9 items-center gap-1 text-[11px] font-semibold text-stone-500 hover:text-primary">{expanded ? "Daha az göster" : "Kitabı tanı"}<ChevronDown className={`h-3 w-3 transition ${expanded ? "rotate-180" : ""}`} /></button>
-      {libraryBook ? <Link to={`/library/${libraryBook.id}`} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#283e33] text-xs font-semibold text-white hover:bg-[#365541]">Kitabına git<ArrowRight className="h-3.5 w-3.5" /></Link> : <a href={`https://www.kitapyurdu.com/index.php?route=product/search&filter_name=${query}`} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#283e33] text-xs font-semibold text-white hover:bg-[#365541]">Kitapçıda ara<ArrowRight className="h-3.5 w-3.5" /></a>}
-      {!libraryBook && <a href={`https://www.google.com/search?tbm=shop&q=${query}`} target="_blank" rel="noopener noreferrer" className="mt-2 flex min-h-8 items-center justify-center gap-1 text-[10px] text-stone-500 hover:text-primary">Diğer mağazalarda ara<ShoppingBag className="h-3 w-3" /></a>}
+      {libraryBook ? <Link to={`/library/${libraryBook.id}`} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#283e33] text-xs font-semibold text-white hover:bg-[#365541]">Kitabına git<ArrowRight className="h-3.5 w-3.5" /></Link> : <a href={`https://www.kitapyurdu.com/index.php?route=product/list&filter_name=${bookshopQuery}`} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#283e33] text-xs font-semibold text-white hover:bg-[#365541]">Kitapçıda ara<ArrowRight className="h-3.5 w-3.5" /></a>}
+      {!libraryBook && <a href={`https://www.google.com/search?q=${storesQuery}`} target="_blank" rel="noopener noreferrer" className="mt-2 flex min-h-8 items-center justify-center gap-1 text-[10px] text-stone-500 hover:text-primary">Diğer mağazalarda ara<ShoppingBag className="h-3 w-3" /></a>}
     </div>
   </article>;
 }
