@@ -93,7 +93,6 @@ export default function AddBookPage() {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchInfo, setSearchInfo] = useState<string | null>(null);
-  const [searchSources, setSearchSources] = useState<string[]>([]);
   // 📷 Kamera ile barkod tarama
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
@@ -157,7 +156,6 @@ export default function AddBookPage() {
 
     setSearchError(null);
     setSearchInfo(null);
-    setSearchSources([]);
     setSearching(true);
 
     try {
@@ -184,7 +182,6 @@ export default function AddBookPage() {
           : "Yazar, yayınevi ve sayfa sayısı ISBN ile eşleşen farklı internet kaynaklarından doğrulandı."
       );
 
-      setSearchSources(data.editionSources || []);
       setTitle(data.title || "");
       setAuthor(data.author || "");
       setPublisher(data.publisher || "");
@@ -441,7 +438,7 @@ export default function AddBookPage() {
         {searchInfo && !searchError && (
           <div className="mt-2 inline-flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100">
             <Sparkles className="mt-[2px] w-3.5 h-3.5" />
-            <div><p>{searchInfo}</p>{searchSources.length > 0 && <div className="mt-2 flex flex-wrap gap-3">{searchSources.map((url, index) => <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">Kaynak {index + 1}</a>)}</div>}</div>
+            <p>{searchInfo}</p>
           </div>
         )}
       </section>
