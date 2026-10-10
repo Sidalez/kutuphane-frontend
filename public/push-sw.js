@@ -4,7 +4,8 @@ self.addEventListener("push", event => {
   try { payload = event.data?.json() || {}; } catch {}
   event.waitUntil(self.registration.showNotification(payload.title || "Kütüphanem", {
     body: payload.body || "Yeni bir bildirimin var.",
-    icon: "/icons/icon-192.png", badge: "/icons/icon-192.png",
+    icon: "/icons/icon-192.png?v=2", badge: "/icons/icon-192.png?v=2",
+    lang: "tr", dir: "ltr",
     tag: payload.tag || "kutuphanem", data: { url: payload.url || "/notifications" },
   }));
 });
