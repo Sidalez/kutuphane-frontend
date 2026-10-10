@@ -1,3 +1,4 @@
+import { useAppDialog } from "../components/feedback/DialogProvider";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase/firebase";
@@ -72,6 +73,7 @@ const calculateMinutes = (start?: string, end?: string) => {
 };
 
 export default function StatisticsPage() {
+  const dialog = useAppDialog();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [books, setBooks] = useState<Book[]>([]);
@@ -144,7 +146,7 @@ export default function StatisticsPage() {
       pdf.save(`Okuma_Raporu_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (e) {
       console.error("PDF Hatası:", e);
-      alert("PDF oluşturulurken hata oluştu.");
+      void dialog.alert({title:"Rapor hazırlanamadı",message:"PDF oluşturulurken bir sorun oluştu. Lütfen tekrar dene.",tone:"error",confirmLabel:"Anladım"});
     } finally {
       setExporting(false);
     }

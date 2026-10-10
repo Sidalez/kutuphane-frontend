@@ -1,3 +1,4 @@
+import { useAppDialog } from "../components/feedback/DialogProvider";
 // src/hooks/useBookEdit.ts
 
 import { useState } from "react";
@@ -7,6 +8,7 @@ import { api } from "../apiClient";
 import type { Book } from "../types/book";
 
 export function useBookEdit(initial: Book | null, onSaved?: (b: Book) => void) {
+  const dialog = useAppDialog();
   const [form, setForm] = useState<any>(initial || {});
   const [loading, setLoading] = useState(false);
 
@@ -39,7 +41,7 @@ const autoFillFromAI = async () => {
 
   } catch (e) {
     console.error(e);
-    alert("AI kitap bilgisi alınamadı");
+    void dialog.alert({title:"Kitap bilgileri alınamadı",message:"Bağlantını kontrol edip tekrar dene. Girdiğin bilgiler korunuyor.",tone:"error",confirmLabel:"Anladım"});
   }
 
   setLoading(false);
@@ -69,7 +71,7 @@ const autoFillFromAI = async () => {
       onSaved?.(form);
     } catch (e) {
       console.error(e);
-      alert("Kaydedilirken hata oluştu");
+      void dialog.alert({title:"Değişiklikler kaydedilemedi",message:"Lütfen bağlantını kontrol edip yeniden kaydetmeyi dene.",tone:"error",confirmLabel:"Anladım"});
     }
 
     setLoading(false);

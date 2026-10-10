@@ -1,3 +1,4 @@
+import { DialogProvider } from "./components/feedback/DialogProvider";
 import MobileRuntime from "./components/feedback/MobileRuntime";
 // src/main.tsx
 import React from "react";
@@ -13,9 +14,11 @@ const router = createBrowserRouter([{ path: "*", element: <><MobileRuntime /><Ap
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <ThemeProvider>
+      <DialogProvider>
       <AuthProvider>
         <RouterProvider router={router} />
       </AuthProvider>
+      </DialogProvider>
     </ThemeProvider>
   </React.StrictMode>
 );

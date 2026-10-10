@@ -1,3 +1,4 @@
+import { useAppDialog } from "../components/feedback/DialogProvider";
 // src/auth/AuthContext.tsx
 import {
   createContext,
@@ -53,6 +54,7 @@ async function upsertUserDoc(user: User, extra?: Partial<{ fullName: string }>) 
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const dialog = useAppDialog();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [avatar, setAvatar] = useState<{ uid: string; url: string } | null>(null);
@@ -99,7 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         message =
           "Bu domain Firebase'de yetkili değil. Firebase Authentication ayarlarından 'Authorized domains' kısmını kontrol et.";
       }
-      alert(message);
+      await dialog.alert({title:"Giriş tamamlanamadı",message,tone:"error",confirmLabel:"Anladım"});
       throw error;
     }
   };
