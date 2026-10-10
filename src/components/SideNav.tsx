@@ -10,6 +10,7 @@ import {
   UserCircle2,
   X,
   Clapperboard,
+  Settings,
 } from "lucide-react";
 
 const bookNavItems = [
@@ -135,6 +136,7 @@ export default function SideNav({ isOpen, onClose }: SideNavProps) {
             );
           })}
           {isMediaModule && <NavLink to="/profile" onClick={onClose} className={({ isActive }) => getNavLinkClass(isActive)}><span className="flex h-8 w-8 items-center justify-center"><UserCircle2 className="h-4 w-4" /></span>Profilim</NavLink>}
+          <NavLink to="/settings" onClick={onClose} className={({ isActive }) => getNavLinkClass(isActive)}><span className="flex h-8 w-8 items-center justify-center"><Settings className="h-4 w-4" /></span>Ayarlar</NavLink>
         </nav>
 
         <div className="mt-auto px-3 pb-4">

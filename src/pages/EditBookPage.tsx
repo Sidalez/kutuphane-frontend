@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import PageLoading from "../components/feedback/PageLoading";
 // src/pages/EditBookPage.tsx
 
@@ -98,6 +99,7 @@ const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [categoryInput, setCategoryInput] = useState("");
   const [shelfTags, setShelfTags] = useState<string[]>([]);
   const [shelfInput, setShelfInput] = useState("");
+  const markSaved = useUnsavedChanges({ form, shelfTags }, !loading);
 
   const inputClass =
     "w-full px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm " +
@@ -310,6 +312,7 @@ const [deleteModalOpen, setDeleteModalOpen] = useState(false);
         updatedAt: serverTimestamp(),
       });
 
+      markSaved();
       showToast("Kitap bilgileri başarıyla güncellendi.");
       setTimeout(() => {
         navigate("/library");
@@ -354,6 +357,7 @@ const handleDeleteBook = async () => {
     // Biraz göster, sonra kütüphaneye dön
     setTimeout(() => {
       setDeleteModalOpen(false);
+      markSaved();
       navigate("/library");
     }, 1500);
   } catch (err) {

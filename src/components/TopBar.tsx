@@ -1,11 +1,12 @@
 // src/components/TopBar.tsx
 import { useTheme } from "../theme/ThemeContext";
 import {
+  ArrowLeft,
   Moon,
   SunMedium,
   LibraryBig,
   UserCircle2,
-  LogOut,
+  Settings,
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +14,7 @@ import { useLocation } from "react-router-dom";
 
 export default function TopBar() {
   const { theme, toggleTheme } = useTheme();
-  const { user, loading, logout } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 const location = useLocation();
 
@@ -23,8 +24,9 @@ const isMediaModule = location.pathname.startsWith("/media") ||
   return (
     <header className="sticky top-0 z-20 min-h-16 pt-[env(safe-area-inset-top)] shrink-0 flex items-center justify-between px-4 lg:px-8 border-b border-slate-200/60 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl">
       {/* Sol logo alanı */}
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-md shadow-orange-200/70 dark:shadow-orange-900/40">
+      <div className="flex min-w-0 items-center gap-2">
+        {(/^(\/add-|\/edit\/|\/library\/|\/media\/[^/]+$)/.test(location.pathname) || ["/profile", "/settings"].includes(location.pathname)) && <button type="button" aria-label="Geri dön" onClick={() => { if (window.history.state?.idx > 0) navigate(-1); else navigate(isMediaModule ? "/media" : "/library"); }} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowLeft className="h-5 w-5" /></button>}
+        <div className="hidden sm:flex w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-md shadow-orange-200/70 dark:shadow-orange-900/40">
           <LibraryBig className="w-5 h-5 text-white" />
         </div>
         <div className="flex flex-col leading-tight">
@@ -116,12 +118,12 @@ const isMediaModule = location.pathname.startsWith("/media") ||
 
             {/* Çıkış butonu */}
             <button
-              onClick={logout}
-              aria-label="Çıkış yap"
+              onClick={() => navigate("/settings")}
+              aria-label="Ayarları aç"
               className="inline-flex h-9 w-9 md:w-auto items-center justify-center gap-1.5 rounded-full bg-slate-900 text-white text-[11px] font-semibold md:px-3 shadow-sm hover:brightness-110 dark:bg-slate-100 dark:text-slate-900 transition"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Çıkış</span>
+              <Settings className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Ayarlar</span>
             </button>
           </div>
         ) : (

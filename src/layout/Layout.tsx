@@ -51,7 +51,7 @@ export default function Layout() {
             {label}
           </NavLink>
         ))}
-        <button type="button" aria-label="Diğer menüleri aç" aria-expanded={isSideOpen} aria-controls="app-navigation" onClick={() => setIsSideOpen(true)} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold active:scale-95 ${isSideOpen || ["/profile", "/goals", "/statistics", "/media/reports"].includes(pathname) ? "text-primary" : "text-slate-500 dark:text-slate-400"}`}><span className="flex h-7 w-10 items-center justify-center"><Menu className="h-5 w-5" /></span>Diğer</button>
+        <button type="button" aria-label="Diğer menüleri aç" aria-expanded={isSideOpen} aria-controls="app-navigation" onClick={() => setIsSideOpen(true)} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold active:scale-95 ${isSideOpen || ["/settings", "/profile", "/goals", "/statistics", "/media/reports"].includes(pathname) ? "text-primary" : "text-slate-500 dark:text-slate-400"}`}><span className="flex h-7 w-10 items-center justify-center"><Menu className="h-5 w-5" /></span>Diğer</button>
       </nav>
     </div>
   );

@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { useDraftField } from "../hooks/useDraftField";
 import { beginActivity } from "../requestActivity";
 // src/pages/AddBookPage.tsx
@@ -131,6 +132,8 @@ export default function AddBookPage() {
   const [expectedRating, setExpectedRating] = useDraftField<number | undefined>(draftKey, "expectedRating", undefined);
   const [progressRating, setProgressRating] = useDraftField<number | undefined>(draftKey, "progressRating", undefined);
   const [finalRating, setFinalRating] = useDraftField<number | undefined>(draftKey, "finalRating", undefined);
+
+  const markSaved = useUnsavedChanges({ isbn, title, author, publisher, publishedDate, description, coverImageUrl, status, totalPages, pagesRead, shelf, categories, startDate, endDate, notes, expectedRating, progressRating, finalRating });
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -327,6 +330,7 @@ export default function AddBookPage() {
         updatedAt: serverTimestamp(),
       });
 
+      markSaved();
       try { sessionStorage.removeItem(draftKey); } catch {}
       navigate("/library", { state: { notice: "Kitap kütüphanene eklendi." } });
     } catch (err) {

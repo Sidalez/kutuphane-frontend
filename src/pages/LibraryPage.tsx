@@ -1,3 +1,4 @@
+import ContinueReading from "../components/books/ContinueReading";
 import PageLoading from "../components/feedback/PageLoading";
 // src/pages/LibraryPage.tsx
 
@@ -138,6 +139,7 @@ export default function LibraryPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      <ContinueReading books={books} />
       {/* ÜST HEADER */}
       <div
         className="

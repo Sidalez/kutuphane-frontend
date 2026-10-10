@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { beginActivity } from "../requestActivity";
 // src/pages/AddMediaPage.tsx
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -656,6 +657,8 @@ export default function AddMediaPage() {
   const [seasonDetails, setSeasonDetails] = useState<TvSeasonDetails | null>(null);
   const [watchedEpisodes, setWatchedEpisodes] = useState<Record<string, TvEpisode>>({});
   const [watchedEpisodesBeforeComplete, setWatchedEpisodesBeforeComplete] = useState<Record<string, TvEpisode> | null>(null);
+
+  const markSaved = useUnsavedChanges(selected ? { selected, status, watchedMinutes, userRating, expectedRating, progressRating, startDate, completionDate, notes, selectedShelfIds, watchedEpisodes } : null);
 
   const [toast, setToast] = useState<ToastState>(null);
   const [previewImage, setPreviewImage] = useState<PreviewImage>(null);
@@ -1382,6 +1385,7 @@ export default function AddMediaPage() {
         ...cleanPayload,
       } as MediaItem);
 
+      markSaved(null);
       showToast("success", "Film/dizi başarıyla kaydedildi.");
       resetFormAfterSave();
     } catch (err: any) {
