@@ -8,6 +8,7 @@ import App from "./App";
 import "./index.css";
 import { ThemeProvider } from "./theme/ThemeContext";
 import { AuthProvider } from "./auth/AuthContext";
+import { NotificationProvider } from "./notifications/NotificationContext";
 
 const router = createBrowserRouter([{ path: "*", element: <><MobileRuntime /><App /></> }]);
 
@@ -16,7 +17,9 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <ThemeProvider>
       <DialogProvider>
       <AuthProvider>
+        <NotificationProvider>
         <RouterProvider router={router} />
+        </NotificationProvider>
       </AuthProvider>
       </DialogProvider>
     </ThemeProvider>

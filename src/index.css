@@ -37,7 +37,7 @@ button, a { touch-action: manipulation; }
 :focus-visible { outline: 2px solid #ea580c; outline-offset: 3px; }
 input, textarea, select { scroll-margin-block: 6rem; }
 /* Safari date controls otherwise retain an intrinsic width on narrow cards. */
-input[type="date"] {
+input[type="date"], input[type="time"] {
   display: block;
   box-sizing: border-box;
   width: 100%;
@@ -47,11 +47,11 @@ input[type="date"] {
   -webkit-appearance: none;
   appearance: none;
 }
-input[type="date"]::-webkit-date-and-time-value {
+input[type="date"]::-webkit-date-and-time-value, input[type="time"]::-webkit-date-and-time-value {
   min-width: 0;
   text-align: left;
 }
-input[type="date"]::-webkit-datetime-edit {
+input[type="date"]::-webkit-datetime-edit, input[type="time"]::-webkit-datetime-edit {
   min-width: 0;
   padding: 0;
 }

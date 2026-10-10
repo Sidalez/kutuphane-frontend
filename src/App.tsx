@@ -8,6 +8,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Layout from "./layout/Layout";
 
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const LibraryPage = lazy(() => import("./pages/LibraryPage"));
 const AddBookPage = lazy(() => import("./pages/AddBookPage"));
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="/edit/:id" element={<EditBookPage />} />
 
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/statistics" element={<StatisticsPage />} />
           <Route path="/goals" element={<GoalsPage />} />

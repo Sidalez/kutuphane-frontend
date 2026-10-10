@@ -7,16 +7,21 @@ import {
   LibraryBig,
   UserCircle2,
   Settings,
+  Bell,
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
+import { useNotifications } from "../notifications/NotificationContext";
 
 export default function TopBar() {
   const { theme, toggleTheme } = useTheme();
   const { user, loading, profilePhotoURL } = useAuth();
+  const { items } = useNotifications();
+  const unread = items.filter(item => !item.read).length;
   const navigate = useNavigate();
 const location = useLocation();
+const showBack = /^(\/add-|\/edit\/|\/library\/|\/media\/[^/]+$)/.test(location.pathname) || ["/profile", "/settings", "/notifications"].includes(location.pathname);
 
 const isMediaModule = location.pathname.startsWith("/media") || 
                       location.pathname.startsWith("/add-media");
@@ -25,12 +30,12 @@ const isMediaModule = location.pathname.startsWith("/media") ||
     <header className="sticky top-0 z-20 min-h-16 pt-[env(safe-area-inset-top)] shrink-0 flex items-center justify-between px-4 lg:px-8 border-b border-slate-200/60 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl">
       {/* Sol logo alanı */}
       <div className="flex min-w-0 items-center gap-2">
-        {(/^(\/add-|\/edit\/|\/library\/|\/media\/[^/]+$)/.test(location.pathname) || ["/profile", "/settings"].includes(location.pathname)) && <button type="button" aria-label="Geri dön" onClick={() => { if (window.history.state?.idx > 0) navigate(-1); else navigate(isMediaModule ? "/media" : "/library"); }} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowLeft className="h-5 w-5" /></button>}
+        {showBack && <button type="button" aria-label="Geri dön" onClick={() => { if (window.history.state?.idx > 0) navigate(-1); else navigate(isMediaModule ? "/media" : "/library"); }} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowLeft className="h-5 w-5" /></button>}
         <div className="hidden sm:flex w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-md shadow-orange-200/70 dark:shadow-orange-900/40">
           <LibraryBig className="w-5 h-5 text-white" />
         </div>
-        <div className="flex flex-col leading-tight">
-          <span className="font-bold text-[15px] tracking-tight text-slate-900 dark:text-slate-50">
+        <div className="flex min-w-0 flex-col leading-tight">
+          <span className="truncate font-bold text-[15px] tracking-tight text-slate-900 dark:text-slate-50">
             Kütüphanem
           </span>
           <span className="hidden md:block text-[12px] font-medium text-slate-600 dark:text-slate-400">
@@ -70,11 +75,12 @@ const isMediaModule = location.pathname.startsWith("/media") ||
 
 
       {/* Sağ taraf: tema + kullanıcı */}
-      <div className="flex items-center gap-2 md:gap-3">
+      <div className="flex shrink-0 items-center gap-1 md:gap-3">
+        {user && <button type="button" onClick={() => navigate("/notifications")} aria-label={`Bildirimler${unread ? `, ${unread} okunmamış` : ""}`} className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"><Bell className="h-4 w-4" />{unread > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-600 px-1 text-[9px] font-bold text-white">{unread > 99 ? "99+" : unread}</span>}</button>}
         {/* Tema butonu */}
         <button
           onClick={toggleTheme}
-          className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-slate-200/80 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          className="hidden sm:inline-flex items-center justify-center w-9 h-9 rounded-full border border-slate-200/80 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           aria-label="Tema değiştir"
         >
           {theme === "dark" ? (

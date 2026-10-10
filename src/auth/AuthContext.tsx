@@ -1,4 +1,5 @@
 import { useAppDialog } from "../components/feedback/DialogProvider";
+import { removeDeviceNotifications } from "../notifications/api";
 // src/auth/AuthContext.tsx
 import {
   createContext,
@@ -128,6 +129,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    await removeDeviceNotifications().catch(() => undefined);
     await signOut(auth);
   };
 
