@@ -36,6 +36,25 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 button, a { touch-action: manipulation; }
 :focus-visible { outline: 2px solid #ea580c; outline-offset: 3px; }
 input, textarea, select { scroll-margin-block: 6rem; }
+/* Safari date controls otherwise retain an intrinsic width on narrow cards. */
+input[type="date"] {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-inline-size: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
+input[type="date"]::-webkit-datetime-edit {
+  min-width: 0;
+  padding: 0;
+}
 @media (max-width: 767px) {
   button { min-height: 44px; min-width: 44px; }
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px !important; min-height: 44px; }

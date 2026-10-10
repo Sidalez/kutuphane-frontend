@@ -2206,7 +2206,7 @@ export default function MediaDetailPage() {
             event.preventDefault();
             void handleSave();
           }}
-          className="space-y-5 rounded-[2rem] border border-slate-200 bg-white px-4 py-5 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:px-5 xl:sticky xl:top-5 xl:col-span-1 xl:self-start"
+          className="min-w-0 space-y-5 rounded-[2rem] border border-slate-200 bg-white px-4 py-5 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:px-5 xl:sticky xl:top-5 xl:col-span-1 xl:self-start"
         >
           <div>
             <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-50">
@@ -2271,13 +2271,14 @@ export default function MediaDetailPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">İzleme tarihi</label>
-            <div className="relative">
+            <label htmlFor="media-watch-date" className="block text-xs font-medium text-slate-600 dark:text-slate-300">İzleme tarihi</label>
+            <div className="relative min-w-0 max-w-full">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                 <CalendarDays className="h-3.5 w-3.5" />
               </span>
               <input
                 type="date"
+                id="media-watch-date"
                 value={watchDate}
                 disabled={!dateFieldsEnabled}
                 onClick={(event) => (event.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.()}
