@@ -1,3 +1,4 @@
+import { beginActivity } from "./requestActivity";
 import axios from "axios";
 
 // Çevre değişkeninden (env) backend adresini al
@@ -14,4 +15,9 @@ console.log("API BASE URL:", API_BASE_URL);
 // Ortak axios instance
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 120000,
 });
+
+const activeRequests = new WeakMap<object, () => void>();
+api.interceptors.request.use(config => { activeRequests.set(config, beginActivity()); return config; });
+api.interceptors.response.use(response => { activeRequests.get(response.config)?.(); return response; }, error => { if (error.config) activeRequests.get(error.config)?.(); return Promise.reject(error); });

@@ -1,8 +1,12 @@
+import { useDraftField } from "../hooks/useDraftField";
+import { beginActivity } from "../requestActivity";
 // src/pages/AddBookPage.tsx
 import {
   FormEvent,
   KeyboardEvent,
   useState,
+  useRef,
+  useEffect,
   type Dispatch,
   type SetStateAction,
 } from "react";
@@ -88,8 +92,13 @@ function StarRating({
 export default function AddBookPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const draftKey = `book-draft:${user?.uid || "guest"}`;
+  const saveLock = useRef(false);
+  const searchLock = useRef(false);
+  const searchController = useRef<AbortController | null>(null);
+  useEffect(() => () => searchController.current?.abort(), []);
 
-  const [isbn, setIsbn] = useState("");
+  const [isbn, setIsbn] = useDraftField(draftKey, "isbn", "");
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchInfo, setSearchInfo] = useState<string | null>(null);
@@ -97,31 +106,31 @@ export default function AddBookPage() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
 
-  const [title, setTitle] = useState("");
-  const [author, setAuthor] = useState("");
-  const [publisher, setPublisher] = useState("");
-  const [publishedDate, setPublishedDate] = useState("");
-  const [description, setDescription] = useState("");
-  const [coverImageUrl, setCoverImageUrl] = useState("");
+  const [title, setTitle] = useDraftField(draftKey, "title", "");
+  const [author, setAuthor] = useDraftField(draftKey, "author", "");
+  const [publisher, setPublisher] = useDraftField(draftKey, "publisher", "");
+  const [publishedDate, setPublishedDate] = useDraftField(draftKey, "publishedDate", "");
+  const [description, setDescription] = useDraftField(draftKey, "description", "");
+  const [coverImageUrl, setCoverImageUrl] = useDraftField(draftKey, "coverImageUrl", "");
 
-  const [status, setStatus] = useState<BookStatus>("OKUNACAK");
-  const [totalPages, setTotalPages] = useState<number | undefined>();
-  const [pagesRead, setPagesRead] = useState<number | undefined>();
+  const [status, setStatus] = useDraftField<BookStatus>(draftKey, "status", "OKUNACAK");
+  const [totalPages, setTotalPages] = useDraftField<number | undefined>(draftKey, "totalPages", undefined);
+  const [pagesRead, setPagesRead] = useDraftField<number | undefined>(draftKey, "pagesRead", undefined);
 
-  const [shelf, setShelf] = useState("");
+  const [shelf, setShelf] = useDraftField(draftKey, "shelf", "");
   const [shelfInput, setShelfInput] = useState("");
 
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useDraftField<string[]>(draftKey, "categories", []);
   const [categoryInput, setCategoryInput] = useState("");
 
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useDraftField(draftKey, "startDate", "");
+  const [endDate, setEndDate] = useDraftField(draftKey, "endDate", "");
 
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useDraftField(draftKey, "notes", "");
 
-  const [expectedRating, setExpectedRating] = useState<number | undefined>();
-  const [progressRating, setProgressRating] = useState<number | undefined>();
-  const [finalRating, setFinalRating] = useState<number | undefined>();
+  const [expectedRating, setExpectedRating] = useDraftField<number | undefined>(draftKey, "expectedRating", undefined);
+  const [progressRating, setProgressRating] = useDraftField<number | undefined>(draftKey, "progressRating", undefined);
+  const [finalRating, setFinalRating] = useDraftField<number | undefined>(draftKey, "finalRating", undefined);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -147,6 +156,8 @@ export default function AddBookPage() {
   };
 
   const handleIsbnSearch = async () => {
+    if (searchLock.current) return;
+    if (!navigator.onLine) { setSearchError("İnternet bağlantısı yok. Yeniden bağlandıktan sonra tekrar ara."); return; }
     const trimmed = isbn.trim();
 
     if (!trimmed) {
@@ -157,12 +168,19 @@ export default function AddBookPage() {
     setSearchError(null);
     setSearchInfo(null);
     setSearching(true);
+    searchLock.current = true;
+    const finishActivity = beginActivity();
+    const controller = new AbortController();
+    searchController.current = controller;
+    let timedOut = false;
+    const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 90000);
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/books/isbn`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isbn: trimmed }),
+        signal: controller.signal,
       });
 
       const response: { success: boolean; data?: IsbnBookResponse; message?: string } = await res.json();
@@ -205,9 +223,15 @@ export default function AddBookPage() {
     } catch (err) {
       console.error("ISBN kaynak arama hatası:", err);
       setSearchError(
-        "Bir hata oluştu. Daha sonra tekrar dene veya bilgileri manuel doldur."
+        controller.signal.aborted
+          ? timedOut ? "Arama beklenenden uzun sürdü. Tekrar deneyebilirsin; form taslağın korunuyor." : "Arama durduruldu. Hazır olduğunda tekrar deneyebilirsin."
+          : "Kitap bilgileri alınamadı. Bağlantını kontrol edip tekrar dene."
       );
     } finally {
+      window.clearTimeout(timeout);
+      searchController.current = null;
+      finishActivity();
+      searchLock.current = false;
       setSearching(false);
     }
   };
@@ -240,7 +264,8 @@ export default function AddBookPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || saveLock.current) return;
+    if (!navigator.onLine) { setSubmitError("Kaydetmek için internet bağlantısı gerekiyor. Taslağın bu tarayıcı oturumunda korunuyor."); return; }
 
     if (!title.trim()) {
       setSubmitError("Başlık alanı zorunludur.");
@@ -249,6 +274,8 @@ export default function AddBookPage() {
 
     setSubmitError(null);
     setSubmitting(true);
+    saveLock.current = true;
+    const finishActivity = beginActivity();
 
     try {
       await addDoc(collection(db, "books"), {
@@ -300,13 +327,16 @@ export default function AddBookPage() {
         updatedAt: serverTimestamp(),
       });
 
-      navigate("/library");
+      try { sessionStorage.removeItem(draftKey); } catch {}
+      navigate("/library", { state: { notice: "Kitap kütüphanene eklendi." } });
     } catch (err) {
       console.error("Kitap ekleme hatası:", err);
       setSubmitError(
         "Kitap eklenirken bir hata oluştu. Lütfen tekrar dene."
       );
     } finally {
+      finishActivity();
+      saveLock.current = false;
       setSubmitting(false);
     }
   };
@@ -368,6 +398,7 @@ export default function AddBookPage() {
         </div>
       </div>
 
+      <p className="text-xs text-slate-500 dark:text-slate-400">Form taslağın bu tarayıcı oturumunda otomatik korunur.</p>
       {/* ISBN ile arama kutusu */}
       <section className="rounded-2xl border border-orange-200/80 bg-gradient-to-r from-orange-50/90 via-amber-50/90 to-yellow-50/90 dark:border-amber-900/60 dark:from-slate-900/90 dark:via-slate-950/90 dark:to-slate-950 px-4 py-4 md:px-5 md:py-5 space-y-3">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
@@ -389,6 +420,8 @@ export default function AddBookPage() {
               onChange={(e) => setIsbn(e.target.value)}
               onKeyDown={handleIsbnKeyDown}
               placeholder="Örn: 9786051711241"
+              inputMode="numeric"
+              autoComplete="off"
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-24 text-sm text-slate-900 shadow-sm outline-none ring-0 transition focus:border-primary/60 focus:ring-2 focus:ring-primary/30 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-50"
             />
             <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] text-slate-400">
@@ -428,6 +461,7 @@ export default function AddBookPage() {
         </div>
 
 
+        {searching && <button type="button" onClick={() => searchController.current?.abort()} className="min-h-11 text-xs font-semibold text-slate-500 underline underline-offset-4">Aramayı durdur</button>}
         {searchError && (
           <div className="mt-2 inline-flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-100">
             <AlertCircle className="mt-[2px] w-3.5 h-3.5" />
@@ -926,7 +960,7 @@ export default function AddBookPage() {
   components={{
     finder: true, // ortada hedef alan
   }}
-  className="w-full aspect-[3/4]"
+  styles={{ container: { width: "100%", aspectRatio: "3/4" } }}
 />
 
               </div>

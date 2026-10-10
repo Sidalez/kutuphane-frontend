@@ -21,7 +21,7 @@ const isMediaModule = location.pathname.startsWith("/media") ||
                       location.pathname.startsWith("/add-media");
 
   return (
-    <header className="sticky top-0 z-20 h-16 shrink-0 flex items-center justify-between px-4 lg:px-8 border-b border-slate-200/60 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl">
+    <header className="sticky top-0 z-20 min-h-16 pt-[env(safe-area-inset-top)] shrink-0 flex items-center justify-between px-4 lg:px-8 border-b border-slate-200/60 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl">
       {/* Sol logo alanı */}
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-md shadow-orange-200/70 dark:shadow-orange-900/40">

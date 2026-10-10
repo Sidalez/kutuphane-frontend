@@ -1,3 +1,4 @@
+import PageLoading from "../components/feedback/PageLoading";
 // src/pages/BookDetailPage.tsx
 
 import { useEffect, useMemo, useState } from "react";
@@ -508,9 +509,7 @@ export default function BookDetailPage() {
 
   if (loadingBook) {
     return (
-      <div className="p-8 text-center text-slate-500">
-        Kitap yükleniyor...
-      </div>
+      <PageLoading label="Kitap yükleniyor…" />
     );
   }
 

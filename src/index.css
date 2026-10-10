@@ -27,3 +27,25 @@ h1, h2, h3 {
 strong, .font-medium {
   @apply font-semibold; /* Medium → SemiBold */
 }
+
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: calc(5rem + env(safe-area-inset-top)); }
+body { margin: 0; min-width: 320px; overscroll-behavior-y: none; }
+#root { min-height: 100dvh; }
+img { max-width: 100%; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button, a { touch-action: manipulation; }
+:focus-visible { outline: 2px solid #ea580c; outline-offset: 3px; }
+input, textarea, select { scroll-margin-block: 6rem; }
+@media (max-width: 767px) {
+  button { min-height: 44px; min-width: 44px; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px !important; min-height: 44px; }
+  main { padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right)); }
+  .keyboard-open [data-mobile-nav], .keyboard-open .app-notices { display: none; }
+}
+.app-progress { animation: app-progress 1.3s ease-in-out infinite; }
+.app-page-enter { animation: app-enter .18s ease-out; }
+@keyframes app-progress { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
+@keyframes app-enter { from { opacity: .65; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

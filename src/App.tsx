@@ -1,29 +1,38 @@
+import { lazy, Suspense } from "react";
+import PageLoading from "./components/feedback/PageLoading";
+import PageErrorBoundary from "./components/feedback/PageErrorBoundary";
+import AppFeedback from "./components/feedback/AppFeedback";
 // src/App.tsx
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import Layout from "./layout/Layout";
 
-import LoginPage from "./pages/LoginPage";
-import LibraryPage from "./pages/LibraryPage";
-import AddBookPage from "./pages/AddBookPage";
-import BookDetailPage from "./pages/BookDetailPage";
-import EditBookPage from "./pages/EditBookPage";
-import ProfilePage from "./pages/ProfilePage";
-import StatisticsPage from "./pages/StatisticsPage";
-import GoalsPage from "./pages/GoalsPage";
-import SuggestionsPage from "./pages/SuggestionsPage";
-import AddMediaPage from "./pages/AddMediaPage";
-import MediaLibraryPage from "./pages/MediaLibraryPage";
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const LibraryPage = lazy(() => import("./pages/LibraryPage"));
+const AddBookPage = lazy(() => import("./pages/AddBookPage"));
+const BookDetailPage = lazy(() => import("./pages/BookDetailPage"));
+const EditBookPage = lazy(() => import("./pages/EditBookPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const StatisticsPage = lazy(() => import("./pages/StatisticsPage"));
+const GoalsPage = lazy(() => import("./pages/GoalsPage"));
+const SuggestionsPage = lazy(() => import("./pages/SuggestionsPage"));
+const AddMediaPage = lazy(() => import("./pages/AddMediaPage"));
+const MediaLibraryPage = lazy(() => import("./pages/MediaLibraryPage"));
 import { useAuth } from "./auth/AuthContext";
-import MediaDetailPage from "./pages/MediaDetailPage";
-import MediaReportsPage from "./pages/MediaReportsPage";
-import MediaSuggestionsPage from "./pages/MediaSuggestionsPage";
+const MediaDetailPage = lazy(() => import("./pages/MediaDetailPage"));
+const MediaReportsPage = lazy(() => import("./pages/MediaReportsPage"));
+const MediaSuggestionsPage = lazy(() => import("./pages/MediaSuggestionsPage"));
 export default function App() {
   const { user, loading } = useAuth();
 
-  if (loading) return null;
+  const location = useLocation();
+  if (loading) return <PageLoading fullScreen label="Oturumun hazırlanıyor…" />;
 
   return (
+    <>
+    <AppFeedback />
+    <PageErrorBoundary key={location.pathname}>
+    <Suspense fallback={<PageLoading fullScreen label="Sayfa açılıyor…" />}>
     <Routes>
       <Route
         path="/login"
@@ -55,5 +64,8 @@ export default function App() {
         </Route>
       )}
     </Routes>
+    </Suspense>
+    </PageErrorBoundary>
+    </>
   );
 }

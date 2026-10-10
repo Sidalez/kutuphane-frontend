@@ -3,10 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <title>Kütüphanem</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#ea580c" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Kütüphanem" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+    <style>
+      .boot{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:#fffaf3;color:#0f172a;font:16px system-ui,sans-serif}.boot img{border-radius:24px}.boot strong{font-size:24px}.boot-ring{width:24px;height:24px;border:3px solid #fed7aa;border-top-color:#ea580c;border-radius:50%;animation:boot-spin .9s linear infinite}@keyframes boot-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.boot-ring{animation:none}}
+    </style>
   </head>
-  <body class="bg-slate-50">
-    <div id="root"></div>
+  <body>
+    <div id="root"><div class="boot" role="status"><img src="/icons/icon-192.png" width="80" height="80" alt="" /><strong>Kütüphanem</strong><span class="boot-ring" aria-hidden="true"></span><span>Uygulama hazırlanıyor…</span></div></div>
+    <noscript>Uygulamayı kullanmak için tarayıcında JavaScript’i etkinleştir.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

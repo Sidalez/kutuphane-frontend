@@ -1,3 +1,4 @@
+import PageLoading from "../components/feedback/PageLoading";
 // src/pages/EditBookPage.tsx
 
 import { useEffect, useState } from "react";
@@ -374,9 +375,7 @@ const handleDeleteBook = async () => {
 
   if (loading) {
     return (
-      <div className="p-8 text-center text-slate-500">
-        Kitap bilgileri yükleniyor...
-      </div>
+      <PageLoading label="Kitap bilgileri yükleniyor…" />
     );
   }
 

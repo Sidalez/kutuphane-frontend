@@ -1,5 +1,6 @@
+import { beginActivity } from "../requestActivity";
 // src/pages/AddMediaPage.tsx
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   addDoc,
   collection,
@@ -631,6 +632,7 @@ export default function AddMediaPage() {
   const [searching, setSearching] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [saving, setSaving] = useState(false);
+  const saveLock = useRef(false);
 
   const [searchResults, setSearchResults] = useState<MediaSearchResult[]>([]);
   const [selected, setSelected] = useState<MediaDetails | null>(null);
@@ -1304,6 +1306,8 @@ export default function AddMediaPage() {
   };
 
   const handleSave = async () => {
+    if (saveLock.current) return;
+    if (!navigator.onLine) { showToast("error", "Kaydetmek için internet bağlantısı gerekiyor."); return; }
     if (!user) {
       showToast("error", "Kayıt yapmak için giriş yapmalısın.");
       return;
@@ -1340,6 +1344,8 @@ export default function AddMediaPage() {
       return;
     }
 
+    saveLock.current = true;
+    const finishActivity = beginActivity();
     setSaving(true);
     setToast(null);
 
@@ -1382,6 +1388,8 @@ export default function AddMediaPage() {
       console.error("Medya kayıt hatası:", err);
       showToast("error", err?.message || "Kayıt yapılırken hata oluştu.");
     } finally {
+      saveLock.current = false;
+      finishActivity();
       setSaving(false);
     }
   };

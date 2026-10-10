@@ -1,3 +1,4 @@
+import PageLoading from "../components/feedback/PageLoading";
 // src/pages/MediaLibraryPage.tsx
 
 import { useEffect, useMemo, useState } from "react";
@@ -788,12 +789,7 @@ export default function MediaLibraryPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="inline-flex items-center gap-2 text-sm text-slate-500">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Film ve dizilerin yükleniyor...
-            </div>
-          </div>
+          <PageLoading label="Film ve dizilerin yükleniyor…" />
         ) : filteredItems.length === 0 ? (
           <div className="mt-6">
             <div className="rounded-3xl border border-dashed border-indigo-100/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 p-10 text-center shadow-sm">
