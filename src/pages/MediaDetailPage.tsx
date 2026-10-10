@@ -1,3 +1,5 @@
+import PageLoading from "../components/feedback/PageLoading";
+import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 // src/pages/MediaDetailPage.tsx
 
 import { useEffect, useMemo, useState } from "react";
@@ -1923,12 +1925,7 @@ export default function MediaDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-16">
-        <div className="inline-flex items-center gap-2 text-sm text-slate-500">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Detaylar yükleniyor...
-        </div>
-      </div>
+      <PageLoading {...pageLoadingConfig("/media/item")} />
     );
   }
 
@@ -2541,10 +2538,7 @@ export default function MediaDetailPage() {
               </div>
 
               {loadingSeason ? (
-                <div className="flex justify-center py-10 text-sm text-slate-500">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Bölümler yükleniyor...
-                </div>
+                <PageLoading variant="episodes" label="Bölümler hazırlanıyor…" description="Seçtiğin sezonun bölüm bilgileri getiriliyor." />
               ) : seasonDetails ? (
                 <div className="mt-4 grid max-h-[640px] grid-cols-1 gap-2 overflow-y-auto pr-1">
                   {seasonDetails.episodes.map((episode) => {

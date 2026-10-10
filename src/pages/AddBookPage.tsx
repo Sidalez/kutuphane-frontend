@@ -1,3 +1,4 @@
+import PageLoading from "../components/feedback/PageLoading";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { useDraftField } from "../hooks/useDraftField";
 import { beginActivity } from "../requestActivity";
@@ -465,6 +466,7 @@ export default function AddBookPage() {
         </div>
 
 
+        {searching && <PageLoading compact variant="detail" section="ISBN araması" label="Kitabının baskısı araştırılıyor…" description="Yazar, yayınevi ve sayfa bilgileri ISBN ile eşleşen kaynaklardan kontrol ediliyor." />}
         {searching && <button type="button" onClick={() => searchController.current?.abort()} className="min-h-11 text-xs font-semibold text-slate-500 underline underline-offset-4">Aramayı durdur</button>}
         {searchError && (
           <div className="mt-2 inline-flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-100">

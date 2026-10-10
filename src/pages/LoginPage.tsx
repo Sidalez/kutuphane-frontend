@@ -1,3 +1,4 @@
+import PageLoading from "../components/feedback/PageLoading";
 // src/pages/LoginPage.tsx
 import { FormEvent, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
@@ -70,16 +71,21 @@ export default function LoginPage() {
   };
 
   const handleGoogle = async () => {
+    if (submitting) return;
+    setSubmitting(true);
     setError(null);
     try {
       await signInWithGoogle();
     } catch {
-      // hata AuthContext içinde alert ile gösteriliyor
+      // Hata, ortak uygulama uyarısında gösterilir.
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-50 flex items-center justify-center">
+      {submitting && <div className="fixed inset-x-4 top-[calc(1rem+env(safe-area-inset-top))] z-30 mx-auto max-w-md"><PageLoading compact variant="profile" section="Hesabın" label={mode === "login" ? "Giriş yapılıyor…" : "Hesabın oluşturuluyor…"} description="İşlem tamamlandığında kütüphanen açılacak." /></div>}
       <div className="w-full max-w-6xl mx-auto px-4 py-8 md:py-12 flex flex-col gap-8 md:gap-10 lg:flex-row lg:items-center">
         {/* SOL TARAF – tanıtım / hero */}
         <section className="flex-1 flex flex-col gap-6">

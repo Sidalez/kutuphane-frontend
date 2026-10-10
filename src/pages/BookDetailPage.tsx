@@ -1,3 +1,4 @@
+import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 import PageLoading from "../components/feedback/PageLoading";
 // src/pages/BookDetailPage.tsx
 
@@ -509,7 +510,7 @@ export default function BookDetailPage() {
 
   if (loadingBook) {
     return (
-      <PageLoading variant="detail" label="Kitabın hazırlanıyor…" />
+      <PageLoading {...pageLoadingConfig("/library/book")} />
     );
   }
 

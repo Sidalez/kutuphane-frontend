@@ -1,3 +1,5 @@
+import PageLoading from "../components/feedback/PageLoading";
+import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 // src/pages/ProfilePage.tsx
 import { FormEvent, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
@@ -23,7 +25,7 @@ import {
 type StatusType = "success" | "error" | null;
 
 export default function ProfilePage() {
-  const { user, logout, profilePhotoURL, saveProfilePhoto } = useAuth();
+  const { user, logout, profilePhotoURL, profileLoading, saveProfilePhoto } = useAuth();
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [newPassword, setNewPassword] = useState("");
   const [status, setStatus] = useState<string | null>(null);
@@ -33,6 +35,7 @@ export default function ProfilePage() {
   const [loadingAvatar, setLoadingAvatar] = useState(false);
 
   if (!user) return null;
+  if (profileLoading) return <PageLoading {...pageLoadingConfig("/profile")} />;
 
   const setStatusMessage = (msg: string, type: StatusType) => {
     setStatus(msg);
@@ -169,6 +172,7 @@ export default function ProfilePage() {
         </button>
       </div>
 
+      {(loadingProfile || loadingPassword || loadingAvatar) && <PageLoading compact variant="profile" label={loadingAvatar ? "Profil fotoğrafın kaydediliyor…" : loadingProfile ? "Profil bilgilerin kaydediliyor…" : "Güvenlik işlemin tamamlanıyor…"} description="İşlem tamamlandığında sonucu burada görebilirsin." />}
       {/* Avatar + temel bilgiler */}
       <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
         <div className="relative">
@@ -245,8 +249,8 @@ export default function ProfilePage() {
             disabled={loadingProfile}
             className="inline-flex items-center gap-2 rounded-xl bg-primary text-white text-xs font-semibold px-4 py-2 shadow-sm hover:brightness-110 disabled:opacity-60"
           >
-            <Save className="w-4 h-4" />
-            <span>Profil bilgilerini kaydet</span>
+            {loadingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <span>{loadingProfile ? "Kaydediliyor…" : "Profil bilgilerini kaydet"}</span>
           </button>
         </form>
 
@@ -277,8 +281,8 @@ export default function ProfilePage() {
             disabled={loadingPassword}
             className="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white text-xs font-semibold px-4 py-2 hover:bg-slate-800 disabled:opacity-60"
           >
-            <KeyRound className="w-4 h-4" />
-            <span>Şifreyi güncelle</span>
+            {loadingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+            <span>{loadingPassword ? "İşlem sürüyor…" : "Şifreyi güncelle"}</span>
           </button>
 
           <button

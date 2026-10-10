@@ -1,3 +1,5 @@
+import PageLoading from "../components/feedback/PageLoading";
+import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 // src/pages/MediaSuggestionsPage.tsx
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -1141,15 +1143,9 @@ export default function MediaSuggestionsPage() {
           </div>
 
           {pageLoading ? (
-            <div className="py-14 flex justify-center text-sm text-slate-500">
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              İzleme geçmişin hazırlanıyor...
-            </div>
+            <PageLoading {...pageLoadingConfig("/media/suggestions")} />
           ) : loading ? (
-            <div className="py-14 flex justify-center text-sm text-slate-500">
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              Öneriler hazırlanıyor...
-            </div>
+            <PageLoading variant="media-suggestions" label="Sana özel öneriler hazırlanıyor…" description="Tercihlerin değerlendirilip film ve dizi bilgileri araştırılıyor." />
           ) : suggestions.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 p-10 text-center">
               <div className="mx-auto h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-200">
@@ -1663,10 +1659,7 @@ export default function MediaSuggestionsPage() {
 
                     {detailLoadingKey ===
                       getSuggestionKey(selectedSuggestion) && (
-                      <div className="mt-4 flex items-center gap-2 text-sm text-slate-500">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Detaylar yükleniyor...
-                      </div>
+                      <PageLoading compact variant="media-detail" label="İçerik bilgileri tamamlanıyor…" />
                     )}
                   </div>
                 </div>

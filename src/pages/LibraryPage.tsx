@@ -1,3 +1,4 @@
+import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 import ContinueReading from "../components/books/ContinueReading";
 import PageLoading from "../components/feedback/PageLoading";
 // src/pages/LibraryPage.tsx
@@ -136,6 +137,8 @@ export default function LibraryPage() {
       </div>
     );
   }
+
+  if (loading) return <PageLoading {...pageLoadingConfig("/library")} />;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -336,9 +339,7 @@ export default function LibraryPage() {
 
 
       {/* İÇERİK */}
-      {loading ? (
-        <PageLoading label="Kütüphanen yükleniyor…" />
-      ) : filteredBooks.length === 0 ? (
+      {filteredBooks.length === 0 ? (
         <div className="mt-6">
           <div className="rounded-3xl border border-dashed border-amber-100/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 p-10 text-center shadow-sm">
             <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-slate-800 dark:text-slate-200 mb-4">

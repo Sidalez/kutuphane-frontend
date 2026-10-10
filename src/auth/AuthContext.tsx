@@ -23,6 +23,7 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   profilePhotoURL: string | null;
+  profileLoading: boolean;
   saveProfilePhoto: (photo: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signUpWithEmail: (
@@ -57,13 +58,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const dialog = useAppDialog();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoadedUid, setProfileLoadedUid] = useState<string | null>(null);
+  const profileLoading = Boolean(user && profileLoadedUid !== user.uid);
   const [avatar, setAvatar] = useState<{ uid: string; url: string } | null>(null);
   useEffect(() => {
-    if (!user) { setAvatar(null); return; }
+    if (!user) { setAvatar(null); setProfileLoadedUid(null); return; }
     return onSnapshot(doc(db, "users", user.uid), snapshot => {
+      setProfileLoadedUid(user.uid);
       const photo = snapshot.data()?.avatarDataUrl;
       setAvatar(typeof photo === "string" && photo.startsWith("data:image/jpeg;base64,") ? {uid: user.uid, url: photo} : null);
-    }, error => console.warn("Profil fotoğrafı okunamadı:", error.code));
+    }, error => { console.warn("Profil fotoğrafı okunamadı:", error.code); setProfileLoadedUid(user.uid); });
   }, [user?.uid]);
   const profilePhotoURL = avatar?.uid === user?.uid ? avatar?.url || user?.photoURL || null : user?.photoURL || null;
   const saveProfilePhoto = async (photo: string) => {
@@ -133,6 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         loading,
         profilePhotoURL,
+        profileLoading,
         saveProfilePhoto,
         signInWithGoogle,
         signUpWithEmail,

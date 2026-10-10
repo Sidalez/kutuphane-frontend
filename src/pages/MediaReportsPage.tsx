@@ -1,3 +1,5 @@
+import PageLoading from "../components/feedback/PageLoading";
+import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 // src/pages/MediaReportsPage.tsx
 
 import { useEffect, useMemo, useState } from "react";
@@ -1124,6 +1126,8 @@ const smartInsights = useMemo(() => {
     );
   }
 
+  if (loading) return <PageLoading {...pageLoadingConfig("/media/reports")} />;
+
   const showMovies = viewTab === "GENERAL" || viewTab === "MOVIE";
   const showTv = viewTab === "GENERAL" || viewTab === "TV";
 
@@ -1539,14 +1543,7 @@ const smartInsights = useMemo(() => {
             </div>
           </div>
 
-          {loading ? (
-            <div className="flex justify-center py-10">
-              <div className="inline-flex items-center gap-2 text-sm text-slate-500">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Ay raporları yükleniyor...
-              </div>
-            </div>
-          ) : monthlySummaries.length === 0 ? (
+          {monthlySummaries.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-8 text-center text-sm text-slate-500">
               Bu filtrelere uygun aylık özet bulunamadı.
             </div>
@@ -1815,14 +1812,7 @@ const smartInsights = useMemo(() => {
           </div>
         )}
 
-        {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="inline-flex items-center gap-2 text-sm text-slate-500">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Raporlar yükleniyor...
-            </div>
-          </div>
-        ) : filteredLogs.length === 0 ? (
+        {filteredLogs.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/80 p-10 text-center text-sm text-slate-500">
             Bu filtrelere uygun izleme kaydı bulunamadı.
           </div>

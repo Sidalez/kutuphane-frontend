@@ -1,3 +1,5 @@
+import PageLoading from "../components/feedback/PageLoading";
+import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 // src/pages/GoalsPage.tsx
 import { useEffect, useState, useMemo } from "react";
 import {
@@ -622,10 +624,7 @@ const [deleting, setDeleting] = useState(false);
 
   if (loading) {
     return (
-      <div className="p-20 text-center text-slate-500 flex flex-col items-center gap-2">
-        <Loader2 className="w-8 h-8 animate-spin" />
-        <span>Hedefler yükleniyor...</span>
-      </div>
+      <PageLoading {...pageLoadingConfig("/goals")} />
     );
   }
 

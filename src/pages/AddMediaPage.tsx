@@ -1,3 +1,4 @@
+import PageLoading from "../components/feedback/PageLoading";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { beginActivity } from "../requestActivity";
 // src/pages/AddMediaPage.tsx
@@ -1410,6 +1411,7 @@ export default function AddMediaPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-0 pb-10">
+      {searching && <PageLoading compact variant="media" section="İçerik araması" label="Film ve diziler araştırılıyor…" description="Aramana uygun içerikler ve posterleri getiriliyor." />}
       <ToastBar toast={toast} onClose={() => setToast(null)} />
       <ImagePreviewModal preview={previewImage} onClose={() => setPreviewImage(null)} />
 
@@ -1599,10 +1601,7 @@ export default function AddMediaPage() {
         ) : (
           <div className="space-y-6">
             {loadingDetails ? (
-              <div className="flex items-center gap-3 rounded-[1.5rem] border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-800 dark:border-orange-900/60 dark:bg-orange-950/30 dark:text-orange-100">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Detaylar hızlı modda yükleniyor; poster ve temel bilgiler açık, oyuncular birazdan tamamlanacak.
-              </div>
+              <PageLoading compact variant="media-detail" label="İçerik bilgileri tamamlanıyor…" description="Poster ve temel bilgiler hazır. Oyuncu ve diğer ayrıntılar getiriliyor." />
             ) : null}
 
             <section className="relative isolate overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-5 lg:p-6">
@@ -1940,10 +1939,7 @@ export default function AddMediaPage() {
                     </div>
 
                     {loadingSeason ? (
-                      <div className="flex items-center gap-2 py-8 text-sm text-slate-500">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Bölümler yükleniyor...
-                      </div>
+                      <PageLoading variant="episodes" label="Bölümler hazırlanıyor…" description="Seçtiğin sezonun bölüm bilgileri getiriliyor." />
                     ) : seasonDetails ? (
                       <div className={`grid max-h-[620px] grid-cols-1 gap-2 overflow-y-auto pr-1 ${isEpisodeSelectionActive ? "" : "opacity-70"}`}>
                         {seasonDetails.episodes.map((episode) => {

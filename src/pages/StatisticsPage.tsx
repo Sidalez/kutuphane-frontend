@@ -1,3 +1,5 @@
+import PageLoading from "../components/feedback/PageLoading";
+import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 import { useAppDialog } from "../components/feedback/DialogProvider";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -740,9 +742,7 @@ if (bd && bd.value > 0) {
 
   if (loading)
     return (
-      <div className="p-20 text-center flex justify-center text-slate-500">
-        <Loader2 className="animate-spin mr-2" /> Veriler yükleniyor...
-      </div>
+      <PageLoading {...pageLoadingConfig("/statistics")} />
     );
 
   return (

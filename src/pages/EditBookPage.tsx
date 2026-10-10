@@ -1,3 +1,4 @@
+import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import PageLoading from "../components/feedback/PageLoading";
 // src/pages/EditBookPage.tsx
@@ -379,7 +380,7 @@ const handleDeleteBook = async () => {
 
   if (loading) {
     return (
-      <PageLoading variant="form" label="Kitap bilgileri hazırlanıyor…" />
+      <PageLoading {...pageLoadingConfig("/edit/book")} />
     );
   }
 
