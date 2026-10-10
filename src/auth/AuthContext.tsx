@@ -16,11 +16,13 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { auth, googleProvider, db } from "../firebase/firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
+  profilePhotoURL: string | null;
+  saveProfilePhoto: (photo: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signUpWithEmail: (
     email: string,
@@ -53,6 +55,28 @@ async function upsertUserDoc(user: User, extra?: Partial<{ fullName: string }>) 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [avatar, setAvatar] = useState<{ uid: string; url: string } | null>(null);
+  useEffect(() => {
+    if (!user) { setAvatar(null); return; }
+    return onSnapshot(doc(db, "users", user.uid), snapshot => {
+      const photo = snapshot.data()?.avatarDataUrl;
+      setAvatar(typeof photo === "string" && photo.startsWith("data:image/jpeg;base64,") ? {uid: user.uid, url: photo} : null);
+    }, error => console.warn("Profil fotoğrafı okunamadı:", error.code));
+  }, [user?.uid]);
+  const profilePhotoURL = avatar?.uid === user?.uid ? avatar?.url || user?.photoURL || null : user?.photoURL || null;
+  const saveProfilePhoto = async (photo: string) => {
+    if (!user) throw new Error("Fotoğraf değiştirmek için giriş yapmalısın.");
+    if (!navigator.onLine) throw new Error("Fotoğrafı kaydetmek için internet bağlantısı gerekiyor.");
+    if (!photo.startsWith("data:image/jpeg;base64,") || photo.length > 150000) throw new Error("Geçersiz profil fotoğrafı.");
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        setDoc(doc(db, "users", user.uid), { avatarDataUrl: photo, updatedAt: serverTimestamp() }, {merge: true}),
+        new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("Kaydetme onayı alınamadı. Bağlantını kontrol edip tekrar dene.")), 25000); }),
+      ]);
+    } finally { clearTimeout(timer); }
+    setAvatar({uid: user.uid, url: photo});
+  };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
@@ -106,6 +130,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         loading,
+        profilePhotoURL,
+        saveProfilePhoto,
         signInWithGoogle,
         signUpWithEmail,
         signInWithEmail,

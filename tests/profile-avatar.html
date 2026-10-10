@@ -1,0 +1,26 @@
+<!doctype html><html lang="tr"><meta charset="utf-8"><title>Profil görseli testi</title>
+<button id="run">Görsel testlerini çalıştır</button><pre id="result"></pre>
+<script type="module">
+import { prepareProfileAvatar } from '/src/utils/profileAvatar.ts';
+document.querySelector('#run').onclick = async () => {
+  const output = document.querySelector('#result');
+  const assert = (value, message) => { if (!value) throw Error(message); };
+  try {
+    const canvas = document.createElement('canvas'); canvas.width = 600; canvas.height = 300;
+    const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ea580c'; ctx.fillRect(0, 0, 600, 300);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    const file = new File([blob], 'test.png', { type: 'image/png' });
+    const photo = await prepareProfileAvatar(file);
+    assert(photo.startsWith('data:image/jpeg;base64,'), 'JPEG output');
+    assert(photo.length < 150000, 'Thumbnail size limit');
+    const image = new Image(); image.src = photo; await image.decode();
+    assert(image.naturalWidth === 256 && image.naturalHeight === 256, 'Square thumbnail');
+    for (const invalid of [new File(['x'], 'x.svg', {type:'image/svg+xml'}), new File(['invalid'], 'x.png', {type:'image/png'}), new File([new Uint8Array(16*1024*1024)], 'large.png', {type:'image/png'})]) {
+      let rejected = false;
+      try { await prepareProfileAvatar(invalid); } catch { rejected = true; }
+      assert(rejected, `Reject ${invalid.name}`);
+    }
+    output.textContent = 'PASS: JPEG compression, 256×256 crop, size limit, SVG rejection, corrupt image rejection, oversized file rejection';
+  } catch (error) { output.textContent = `FAIL: ${error.message}`; }
+};
+</script></html>

@@ -14,7 +14,7 @@ import { useLocation } from "react-router-dom";
 
 export default function TopBar() {
   const { theme, toggleTheme } = useTheme();
-  const { user, loading } = useAuth();
+  const { user, loading, profilePhotoURL } = useAuth();
   const navigate = useNavigate();
 const location = useLocation();
 
@@ -96,9 +96,9 @@ const isMediaModule = location.pathname.startsWith("/media") ||
               className="flex items-center gap-2 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-700 rounded-full pl-1.5 pr-3 py-1 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/90 to-orange-500/90 text-xs flex items-center justify-center font-semibold text-white overflow-hidden">
-                {user.photoURL ? (
+                {profilePhotoURL ? (
                   <img
-                    src={user.photoURL}
+                    src={profilePhotoURL}
                     alt={user.displayName ?? "Kullanıcı"}
                     className="w-full h-full object-cover"
                   />

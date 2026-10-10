@@ -6,8 +6,9 @@ import {
   updatePassword,
   sendPasswordResetEmail,
 } from "firebase/auth";
-import { auth, storage } from "../firebase/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { auth } from "../firebase/firebase";
+import { prepareProfileAvatar } from "../utils/profileAvatar";
+import { beginActivity } from "../requestActivity";
 import {
   Camera,
   Save,
@@ -16,14 +17,14 @@ import {
   UserCircle2,
   AlertCircle,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 
 type StatusType = "success" | "error" | null;
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user, logout, profilePhotoURL, saveProfilePhoto } = useAuth();
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
-  const [photoURL, setPhotoURL] = useState<string | null>(user?.photoURL ?? null);
   const [newPassword, setNewPassword] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [statusType, setStatusType] = useState<StatusType>(null);
@@ -66,38 +67,24 @@ export default function ProfilePage() {
   const handleAvatarChange = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    if (!user) return;
-    if (!e.target.files?.[0]) return;
-
-    const file = e.target.files[0];
+    const input = e.currentTarget;
+    const file = input.files?.[0];
+    if (!user || !file || loadingAvatar) return;
     setStatusMessage("", null);
     setLoadingAvatar(true);
-
+    const finish = beginActivity();
     try {
-      // avatars/<uid>/profile.jpg
-      const avatarRef = ref(storage, `avatars/${user.uid}/profile.jpg`);
-
-      // Dosyayı Storage'a yükle
-      await uploadBytes(avatarRef, file);
-
-      // Dosyanın public URL'ini al
-      const url = await getDownloadURL(avatarRef);
-
-      // Firebase Auth profilini güncelle
-      await updateProfile(user, { photoURL: url });
-
-      // Ekranda hemen görmek için state'i güncelle
-      setPhotoURL(url);
-
+      const photo = await prepareProfileAvatar(file);
+      await saveProfilePhoto(photo);
       setStatusMessage("Profil fotoğrafın güncellendi.", "success");
     } catch (err: any) {
-      console.error("Avatar upload error:", err);
-      let msg = "Profil fotoğrafı güncellenirken bir hata oluştu.";
-      if (err.code) msg += ` (${err.code})`;
+      console.error("Avatar update error:", err);
+      const msg = err.code === "permission-denied"
+        ? "Profil fotoğrafı kaydedilemedi. Hesabının profil kaydı için yazma izni gerekiyor."
+        : err.message || "Profil fotoğrafı güncellenemedi. Lütfen tekrar dene.";
       setStatusMessage(msg, "error");
     } finally {
-      setLoadingAvatar(false);
-      e.target.value = "";
+      finish(); setLoadingAvatar(false); input.value = "";
     }
   };
 
@@ -153,9 +140,9 @@ export default function ProfilePage() {
     }
   };
 
-  const avatar = photoURL ? (
+  const avatar = profilePhotoURL ? (
     <img
-      src={photoURL}
+      src={profilePhotoURL}
       alt={user.displayName ?? "Profil"}
       className="w-full h-full object-cover"
     />
@@ -191,10 +178,11 @@ export default function ProfilePage() {
 
           {/* Foto yükleme butonu */}
           <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs border border-white dark:border-slate-800 cursor-pointer hover:brightness-110">
-            <Camera className="w-4 h-4" />
+            {loadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
             <input
               type="file"
               accept="image/*"
+              aria-label="Profil fotoğrafını değiştir"
               className="hidden"
               onChange={handleAvatarChange}
               disabled={loadingAvatar}
