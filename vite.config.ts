@@ -14,7 +14,7 @@ export default defineConfig({
     includeAssets: ["icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"],
     manifest: {
       id: "/", name: "Kütüphanem", short_name: "Kütüphanem", lang: "tr", description: "Kitaplarını, filmlerini ve okuma hedeflerini takip et.",
-      start_url: "/library", scope: "/", display: "standalone", background_color: "#fffaf3", theme_color: "#ea580c",
+      start_url: "/library", scope: "/", display: "standalone", background_color: "#fffaf3", theme_color: "#fffaf3",
       icons: [
         {src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any"},
         {src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any"},

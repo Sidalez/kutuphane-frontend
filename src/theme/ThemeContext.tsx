@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-
-type Theme = "light" | "dark";
+import React, { createContext, useContext, useLayoutEffect, useEffect, useState } from "react";
+import { applyTheme, readTheme, type Theme } from "./themeDom";
 
 interface ThemeContextValue {
   theme: Theme;
@@ -12,20 +11,20 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window === "undefined") return "light";
-    const saved = window.localStorage.getItem("theme");
-    if (saved === "light" || saved === "dark") return saved;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    return readTheme();
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof document === "undefined") return;
-    const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-    window.localStorage.setItem("theme", theme);
+    applyTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    // Reassert colours after iOS restores a suspended Home Screen app.
+    const sync = () => { if (document.visibilityState === "visible") applyTheme(theme); };
+    window.addEventListener("pageshow", sync);
+    document.addEventListener("visibilitychange", sync);
+    return () => { window.removeEventListener("pageshow", sync); document.removeEventListener("visibilitychange", sync); };
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
