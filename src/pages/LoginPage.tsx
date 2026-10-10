@@ -1,4 +1,5 @@
 import PageLoading from "../components/feedback/PageLoading";
+import BrandLogo from "../components/BrandLogo";
 // src/pages/LoginPage.tsx
 import { FormEvent, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
@@ -89,6 +90,7 @@ export default function LoginPage() {
       <div className="w-full max-w-6xl mx-auto px-4 py-8 md:py-12 flex flex-col gap-8 md:gap-10 lg:flex-row lg:items-center">
         {/* SOL TARAF – tanıtım / hero */}
         <section className="flex-1 flex flex-col gap-6">
+          <div className="flex items-center gap-3"><BrandLogo className="h-14 w-14 shadow-lg shadow-orange-950/30" /><span className="text-xl font-semibold tracking-tight">Kütüphanem</span></div>
           {/* üst badge */}
           <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/80 border border-slate-700 px-3 py-1 text-[11px] font-medium text-slate-200 shadow-sm shadow-slate-950/70 w-fit">
             <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary/90 text-[10px] font-bold">

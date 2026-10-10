@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   Moon,
   SunMedium,
-  LibraryBig,
   UserCircle2,
   Settings,
   Bell,
@@ -13,6 +12,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { useNotifications } from "../notifications/NotificationContext";
+import BrandLogo from "./BrandLogo";
 
 export default function TopBar() {
   const { theme, toggleTheme } = useTheme();
@@ -31,9 +31,7 @@ const isMediaModule = location.pathname.startsWith("/media") ||
       {/* Sol logo alanı */}
       <div className="flex min-w-0 items-center gap-2">
         {showBack && <button type="button" aria-label="Geri dön" onClick={() => { if (window.history.state?.idx > 0) navigate(-1); else navigate(isMediaModule ? "/media" : "/library"); }} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"><ArrowLeft className="h-5 w-5" /></button>}
-        <div className="hidden sm:flex w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-md shadow-orange-200/70 dark:shadow-orange-900/40">
-          <LibraryBig className="w-5 h-5 text-white" />
-        </div>
+        <BrandLogo className={`${showBack ? "hidden sm:block" : "block"} h-9 w-9 shadow-sm shadow-orange-600/15`} />
         <div className="flex min-w-0 flex-col leading-tight">
           <span className="truncate font-bold text-[15px] tracking-tight text-slate-900 dark:text-slate-50">
             Kütüphanem
