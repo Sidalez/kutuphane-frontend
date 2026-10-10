@@ -9,6 +9,7 @@ import "./index.css";
 import { ThemeProvider } from "./theme/ThemeContext";
 import { AuthProvider } from "./auth/AuthContext";
 import { NotificationProvider } from "./notifications/NotificationContext";
+import NotificationPermissionPrompt from "./notifications/NotificationPermissionPrompt";
 
 const router = createBrowserRouter([{ path: "*", element: <><MobileRuntime /><App /></> }]);
 
@@ -19,6 +20,7 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       <AuthProvider>
         <NotificationProvider>
         <RouterProvider router={router} />
+        <NotificationPermissionPrompt />
         </NotificationProvider>
       </AuthProvider>
       </DialogProvider>
