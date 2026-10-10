@@ -49,3 +49,10 @@ input, textarea, select { scroll-margin-block: 6rem; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+.app-skeleton { position: relative; overflow: hidden; background: #e9edf2; }
+.dark .app-skeleton { background: #263244; }
+.app-skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(100deg, transparent 15%, rgba(255,255,255,.6) 50%, transparent 85%); animation: skeleton-sweep 2.2s ease-in-out infinite; }
+.dark .app-skeleton::after { background: linear-gradient(100deg, transparent 15%, rgba(255,255,255,.07) 50%, transparent 85%); }
+@keyframes skeleton-sweep { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .app-skeleton::after { animation: none; } }

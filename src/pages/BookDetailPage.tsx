@@ -509,7 +509,7 @@ export default function BookDetailPage() {
 
   if (loadingBook) {
     return (
-      <PageLoading label="Kitap yükleniyor…" />
+      <PageLoading variant="detail" label="Kitabın hazırlanıyor…" />
     );
   }
 

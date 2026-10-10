@@ -41,7 +41,7 @@ export default function Layout() {
         />
 
         <main className="min-w-0 flex-1 px-4 py-5 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-6 lg:px-6 lg:py-6">
-          <Suspense fallback={<PageLoading />}><div key={pathname} className="app-page-enter"><Outlet /></div></Suspense>
+          <Suspense fallback={<PageLoading variant={isMedia ? "media" : pathname.startsWith("/edit/") || pathname.startsWith("/add-") ? "form" : /^\/library\/[^/]+$/.test(pathname) ? "detail" : "list"} />}><div key={pathname} className="app-page-enter"><Outlet /></div></Suspense>
         </main>
       </div>
       <nav aria-label="Ana gezinme" data-mobile-nav className="fixed bottom-0 inset-x-0 z-30 grid grid-cols-5 border-t border-orange-100/80 bg-white/95 px-2 pt-2 pb-[calc(.5rem+env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(15,23,42,.06)] backdrop-blur-xl md:hidden dark:border-slate-800 dark:bg-slate-950/95">

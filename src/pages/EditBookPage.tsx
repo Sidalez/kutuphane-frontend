@@ -379,7 +379,7 @@ const handleDeleteBook = async () => {
 
   if (loading) {
     return (
-      <PageLoading label="Kitap bilgileri yükleniyor…" />
+      <PageLoading variant="form" label="Kitap bilgileri hazırlanıyor…" />
     );
   }
 

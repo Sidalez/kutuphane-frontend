@@ -789,7 +789,7 @@ export default function MediaLibraryPage() {
         </div>
 
         {loading ? (
-          <PageLoading label="Film ve dizilerin yükleniyor…" />
+          <PageLoading variant="media" label="İzleme rafın hazırlanıyor…" />
         ) : filteredItems.length === 0 ? (
           <div className="mt-6">
             <div className="rounded-3xl border border-dashed border-indigo-100/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 p-10 text-center shadow-sm">
