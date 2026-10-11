@@ -3,14 +3,14 @@ import { useAuth } from "../auth/AuthContext";
 import { notificationRequest, removeDeviceNotifications } from "./api";
 
 export type NotificationPreferences = {
-  enabled: boolean; episodes: boolean; seasons: boolean; reading: boolean; watching: boolean;
+  enabled: boolean; episodes: boolean; seasons: boolean; reading: boolean; readingFollowUp: boolean; watching: boolean;
   quietEnabled: boolean; quietStart: string; quietEnd: string; delivery: "instant" | "daily";
   digestTime: string; reminderTime: string; timeZone: string;
 };
-export type AppNotification = { id: string; kind: "episode" | "season" | "reading" | "watching"; title: string; body: string; url: string; createdAt: number; read: boolean };
+export type AppNotification = { id: string; kind: "episode" | "season" | "reading" | "readingFollowUp" | "watching"; title: string; body: string; url: string; createdAt: number; read: boolean };
 type Config = { ready: boolean; pushReady: boolean; publicKey: string | null };
 type Inbox = { preferences: NotificationPreferences; items: AppNotification[]; checkedAt: number | null; deviceCount: number };
-const defaults: NotificationPreferences = { enabled: false, episodes: true, seasons: true, reading: false, watching: false, quietEnabled: true, quietStart: "22:00", quietEnd: "09:00", delivery: "instant", digestTime: "20:00", reminderTime: "20:30", timeZone: "Europe/Istanbul" };
+const defaults: NotificationPreferences = { enabled: false, episodes: true, seasons: true, reading: false, readingFollowUp: true, watching: false, quietEnabled: true, quietStart: "22:00", quietEnd: "09:00", delivery: "instant", digestTime: "20:00", reminderTime: "20:30", timeZone: "Europe/Istanbul" };
 type ContextValue = Inbox & {
   config: Config | null; loading: boolean; busy: boolean; error: string; deviceEnabled: boolean;
   refresh: (check?: boolean) => Promise<void>; savePreferences: (patch: Partial<NotificationPreferences>) => Promise<void>;

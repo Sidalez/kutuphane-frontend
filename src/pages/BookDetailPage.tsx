@@ -305,10 +305,16 @@ export default function BookDetailPage() {
     const today = new Date().toISOString().slice(0, 10);
 
     try {
+      const startInstant = logStartTime ? new Date(`${logDate}T${logStartTime}:00`) : null;
+      const startedAt = startInstant && Number.isFinite(startInstant.getTime()) ? startInstant.toISOString() : null;
+      const toMinutes = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
+      const durationMinutes = logStartTime && logEndTime ? (toMinutes(logEndTime) - toMinutes(logStartTime) + 1440) % 1440 : null;
       const payload = {
         date: logDate,
         startTime: logStartTime || null,
         endTime: logEndTime || null,
+        startedAt,
+        durationMinutes,
         startPage: start,
         endPage: end,
         totalRead,
@@ -1003,7 +1009,7 @@ function LogsTab({
     if (bookStatus !== "OKUNUYOR") return;
 
     if (!logDate) {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = new Date().toLocaleDateString("en-CA");
       setLogDate(today);
     }
 
@@ -1039,7 +1045,7 @@ function LogsTab({
         const startMs: number = data.startAtMs;
         const startDate = new Date(startMs);
 
-        const dateStr = startDate.toISOString().slice(0, 10);
+        const dateStr = startDate.toLocaleDateString("en-CA");
         const hh = String(startDate.getHours()).padStart(2, "0");
         const mm = String(startDate.getMinutes()).padStart(2, "0");
 
@@ -1049,7 +1055,7 @@ function LogsTab({
         setIsRunning(true);
 
         // Tarih & saat alanlarını tekrar doldur
-        setLogDate((prev) => prev || dateStr);
+        setLogDate(dateStr);
         setLogStartTime(`${hh}:${mm}`);
 
         const startPageNumber =
@@ -1140,14 +1146,12 @@ function LogsTab({
 
     const now = new Date();
     const nowMs = now.getTime();
-    const today = now.toISOString().slice(0, 10);
+    const today = now.toLocaleDateString("en-CA");
     const hh = String(now.getHours()).padStart(2, "0");
     const mm = String(now.getMinutes()).padStart(2, "0");
 
-    // Tarih yoksa bugünü yaz
-    if (!logDate) {
-      setLogDate(today);
-    }
+    // An automatic session starts now, even if an older manual date was selected.
+    setLogDate(today);
 
     // Başlangıç saati her zaman şu an
     setLogStartTime(`${hh}:${mm}`);

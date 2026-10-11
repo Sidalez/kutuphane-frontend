@@ -32,6 +32,7 @@ export default function NotificationSettings() {
           ["episodes", "Yeni bölümler", "Kütüphanendeki dizilerin yeni bölümleri yayımlandığında."],
           ["seasons", "Yeni sezon tarihleri", "Takip ettiğin dizinin yeni sezon tarihi açıklandığında."],
           ["reading", "Okuma molası", "Seçtiğin saatte günlük, kısa bir okuma hatırlatması."],
+          ["readingFollowUp", "Okuma ritmim", "Son okuma kaydının başlangıcından 24 saat sonra; kitabın, okuduğun süre ve sayfalarla kişisel hatırlatma."],
           ["watching", "Kaldığın yerden devam et", "İzlediğin bir içerik varsa pazar günü haftalık hatırlatma."],
         ] as const).map(([key, title, detail]) => <Toggle key={key} title={title} detail={detail} checked={draft[key]} disabled={disabled || !draft.enabled} onChange={value => setDraft(d => ({ ...d, [key]: value }))} />)}
         {(draft.reading || draft.watching) && <label className="mb-4 block text-xs font-semibold">Hatırlatma saati<input type="time" required value={draft.reminderTime} onChange={e => setDraft(d => ({ ...d, reminderTime: e.target.value }))} className={input} /></label>}
