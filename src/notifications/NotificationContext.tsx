@@ -15,6 +15,7 @@ type ContextValue = Inbox & {
   config: Config | null; loading: boolean; busy: boolean; error: string; deviceEnabled: boolean;
   refresh: (check?: boolean) => Promise<void>; savePreferences: (patch: Partial<NotificationPreferences>) => Promise<void>;
   enableDevice: () => Promise<void>; disableDevice: () => Promise<void>; testDevice: () => Promise<void>; markRead: (id?: string) => Promise<void>;
+  clearNotifications: (id?: string) => Promise<void>;
 };
 const Context = createContext<ContextValue | null>(null);
 export { Context as NotificationContext };
@@ -106,7 +107,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     await notificationRequest("/read", id ? { id } : { all: true });
     setData(value => ({ ...value, items: value.items.map(item => !id || id === item.id ? { ...item, read: true } : item) }));
   });
-  return <Context.Provider value={{ ...data, config, loading, busy, error, deviceEnabled, refresh, savePreferences, enableDevice, disableDevice, testDevice, markRead }}>{children}</Context.Provider>;
+  const clearNotifications = (id?: string) => action(async () => {
+    const result = await notificationRequest<{ clearedAt?: number }>("/clear", id ? { id } : { all: true });
+    setData(value => ({ ...value, items: value.items.filter(item => id ? item.id !== id : item.createdAt > (result.clearedAt || 0)) }));
+    await refresh();
+  });
+  return <Context.Provider value={{ ...data, config, loading, busy, error, deviceEnabled, refresh, savePreferences, enableDevice, disableDevice, testDevice, markRead, clearNotifications }}>{children}</Context.Provider>;
 }
 export function useNotifications() {
   const value = useContext(Context);
