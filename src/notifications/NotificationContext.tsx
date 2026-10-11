@@ -7,7 +7,7 @@ export type NotificationPreferences = {
   quietEnabled: boolean; quietStart: string; quietEnd: string; delivery: "instant" | "daily";
   digestTime: string; reminderTime: string; timeZone: string;
 };
-export type AppNotification = { id: string; kind: "episode" | "season" | "reading" | "readingFollowUp" | "watching"; title: string; body: string; url: string; createdAt: number; read: boolean };
+export type AppNotification = { id: string; kind: "episode" | "season" | "reading" | "readingFollowUp" | "watching" | "test"; title: string; body: string; url: string; createdAt: number; read: boolean };
 type Config = { ready: boolean; pushReady: boolean; publicKey: string | null };
 type Inbox = { preferences: NotificationPreferences; items: AppNotification[]; checkedAt: number | null; deviceCount: number };
 const defaults: NotificationPreferences = { enabled: false, episodes: true, seasons: true, reading: false, readingFollowUp: true, watching: false, quietEnabled: true, quietStart: "22:00", quietEnd: "09:00", delivery: "instant", digestTime: "20:00", reminderTime: "20:30", timeZone: "Europe/Istanbul" };
@@ -59,7 +59,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const tick = () => { if (document.visibilityState === "visible" && navigator.onLine) void refresh(true); };
     const interval = window.setInterval(tick, 5 * 60000);
     document.addEventListener("visibilitychange", tick); window.addEventListener("online", tick);
-    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", tick); window.removeEventListener("online", tick); };
+    const received = (event: MessageEvent) => { if (event.data?.type === "notification-received") void refresh(); };
+    navigator.serviceWorker?.addEventListener("message", received);
+    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", tick); window.removeEventListener("online", tick); navigator.serviceWorker?.removeEventListener("message", received); };
   }, [uid, refresh]);
   async function action(work: () => Promise<void>) {
     if (lock.current) return;
@@ -99,7 +101,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     });
   }
   const disableDevice = () => action(async () => { await removeDeviceNotifications(); setDeviceEnabled(false); await refresh(); });
-  const testDevice = () => action(async () => { await notificationRequest("/test", {}); });
+  const testDevice = () => action(async () => { await notificationRequest("/test", {}); await refresh(); });
   const markRead = (id?: string) => action(async () => {
     await notificationRequest("/read", id ? { id } : { all: true });
     setData(value => ({ ...value, items: value.items.map(item => !id || id === item.id ? { ...item, read: true } : item) }));

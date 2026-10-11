@@ -2,12 +2,16 @@
 self.addEventListener("push", event => {
   let payload = {};
   try { payload = event.data?.json() || {}; } catch {}
-  event.waitUntil(self.registration.showNotification(payload.title || "Kütüphanem", {
+  event.waitUntil((async () => {
+    await self.registration.showNotification(payload.title || "Kütüphanem", {
     body: payload.body || "Yeni bir bildirimin var.",
     icon: "/icons/icon-192.png?v=2", badge: "/icons/icon-192.png?v=2",
     lang: "tr", dir: "ltr",
     tag: payload.tag || "kutuphanem", data: { url: payload.url || "/notifications" },
-  }));
+    });
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const client of windows) client.postMessage({ type: "notification-received" });
+  })());
 });
 self.addEventListener("notificationclick", event => {
   event.notification.close();
