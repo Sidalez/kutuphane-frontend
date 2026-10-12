@@ -1,3 +1,4 @@
+import ProcessingBadge, { type ProcessingInfo } from "../ProcessingBadge";
 import PageLoading from "../feedback/PageLoading";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -7,6 +8,7 @@ import type { Book } from "../../types/book";
 type Suggestion = { title: string; author: string; genre: string; summary: string; reason: string; coverImageUrl?: string; publisher?: string | null; pageCount?: number | string | null; publishYear?: string | null; isbn?: string | null; editionSource?: string; editionSources?: string[] };
 type Goal = "choose_library_book" | "choose_new_book";
 type Props = {
+  processing?: ProcessingInfo | null;
   books: Book[]; suggestions: Suggestion[]; loadingBooks: boolean; loading: boolean;
   error: string | null; result: string | null; sections: { title: string; items: string[] }[];
   goal: Goal; onGoalChange: (goal: Goal) => void;
@@ -129,6 +131,7 @@ export default function SuggestionsStorefront(props: Props) {
       <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="mb-1 text-xs font-medium text-primary">{onlySaved ? "AKLINDA KALSIN" : props.result ? "SENİN İÇİN SEÇİLDİ" : "KENDİ RAFINDA BİR KEŞİF"}</p><h2 className="text-xl font-semibold tracking-tight md:text-2xl">{onlySaved ? "Göz koydukların" : props.result ? "Sıradaki favorin burada olabilir." : "Rafından ilham al."}</h2></div><span className="text-[10px] text-stone-500">{visible.length} kitap{onlySaved && <button type="button" aria-label="Liste filtresini kapat" onClick={() => setOnlySaved(false)} className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-stone-200"><X className="h-3 w-3" /></button>}</span></div>
       {props.error && <div role="alert" className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs leading-5 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200"><AlertCircle className="h-4 w-4 shrink-0" /><div><p className="font-semibold">Kitaplar şu an seçilemedi.</p><p>{props.error}</p></div></div>}
       {props.loading || props.loadingBooks ? <PageLoading variant="suggestions" label={props.loadingBooks ? "Okuma profilin hazırlanıyor…" : "Sana özel kitaplar araştırılıyor…"} description={props.loadingBooks ? "Kütüphanen ve okuma geçmişin getiriliyor." : "Kitaplar seçiliyor; ISBN ve baskı bilgileri internet kaynaklarından araştırılıyor."} /> : <>
+        {props.result && <ProcessingBadge info={props.processing} />}
         {props.result && profile && !onlySaved && <div className="flex gap-3 rounded-2xl bg-[#eeefe5] p-4 dark:bg-emerald-950/30"><Sparkles className="mt-1 h-4 w-4 shrink-0 text-[#71805a]" /><p className="text-xs leading-6 text-[#68705b] dark:text-emerald-200">{profile}</p></div>}
         {visible.length > 0 ? <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{visible.map((item, index) => <BookTile key={keyOf(item)} item={item} index={index} libraryBook={props.books.find(book => book.title.toLocaleLowerCase("tr-TR") === item.title.toLocaleLowerCase("tr-TR") && (book.author || "").toLocaleLowerCase("tr-TR") === item.author.toLocaleLowerCase("tr-TR"))} saved={saved.has(keyOf(item))} onSave={() => toggleSaved(item)} />)}</div> : <div className="flex flex-col items-center rounded-[22px] border border-dashed border-[#d9d5c8] px-6 py-12 text-center dark:border-slate-700"><div className="mb-4 rounded-full bg-[#eeefe5] p-4 dark:bg-slate-800">{onlySaved ? <Heart className="h-6 w-6 text-primary" /> : <Search className="h-6 w-6 text-[#71805a]" />}</div><h3 className="font-semibold text-xl">{onlySaved ? "Bir kitap kalbine dokunsun." : "Güzel bir keşifle başlayalım."}</h3><p className="mt-3 max-w-sm text-xs leading-6 text-stone-500">{onlySaved ? "Beğendiğin kitapların kalbine dokun; bu oturumda burada bir araya gelsinler." : props.result ? emptyMessage || "Tercihlerini değiştirerek yeni kitaplar keşfedebilirsin." : "Yukarıdan sevdiğin türü seç, nasıl bir hikâye aradığını anlat. Sana özel önerileri birlikte bulalım."}</p></div>}
       </>}

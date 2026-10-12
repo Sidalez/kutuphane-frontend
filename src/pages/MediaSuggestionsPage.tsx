@@ -1,3 +1,4 @@
+import ProcessingBadge, { type ProcessingInfo } from "../components/ProcessingBadge";
 import PageLoading from "../components/feedback/PageLoading";
 import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 // src/pages/MediaSuggestionsPage.tsx
@@ -604,6 +605,7 @@ export default function MediaSuggestionsPage() {
   const [loading, setLoading] = useState(false);
   const [detailLoadingKey, setDetailLoadingKey] = useState<string | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
+  const [processing, setProcessing] = useState<ProcessingInfo | null>(null);
   const [catalogNotice, setCatalogNotice] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -736,6 +738,7 @@ export default function MediaSuggestionsPage() {
     setLoading(true);
     setError(null);
     setCatalogNotice("");
+    setProcessing(null);
     setSelectedSuggestion(null);
     setSelectedDetails(null);
 
@@ -760,8 +763,10 @@ export default function MediaSuggestionsPage() {
         data: SuggestionItem[];
         message?: string;
         notice?: string;
+        processing?: ProcessingInfo;
       }>("/api/media/suggestions", body);
 
+      setProcessing(data.processing || null);
       setCatalogNotice(data.notice || "");
       const list = Array.isArray(data.data) ? data.data : [];
       try { sessionStorage.setItem(seenKey,JSON.stringify([...new Set([...excludedSuggestions,...list.map(item=>`${item.type}:${item.tmdbId}`)])].slice(-120))); } catch {}
@@ -1121,6 +1126,7 @@ export default function MediaSuggestionsPage() {
                 </button>
               </div>
             )}
+            {!loading && <ProcessingBadge info={processing} />}
             {catalogNotice && <p role="status" className="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">{catalogNotice}</p>}
             {error && (
               <div

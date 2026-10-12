@@ -1,3 +1,4 @@
+import type { ProcessingInfo } from "../components/ProcessingBadge";
 // src/pages/SuggestionsPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -11,6 +12,7 @@ import SuggestionsStorefront from "../components/books/SuggestionsStorefront";
 type RecommendGoal = "choose_library_book" | "choose_new_book";
 
 interface AiResponse {
+  processing?: ProcessingInfo;
   text: string;
   books?: Array<{ title: string; author: string; genre: string; summary: string; reason: string; coverImageUrl?: string; publisher?: string | null; pageCount?: number | null; publishYear?: string | null; isbn?: string | null; editionSource?: string; editionSources?: string[] }>;
 }
@@ -373,6 +375,7 @@ export default function SuggestionsPage() {
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [processing, setProcessing] = useState<ProcessingInfo | null>(null);
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [suggestedBooks, setSuggestedBooks] = useState<NonNullable<AiResponse["books"]>>([]);
 
@@ -582,6 +585,7 @@ Favori kategoriler: ${
   const handleGenerate = async () => {
     setAiError(null);
     setAiResult(null);
+    setProcessing(null);
     setSuggestedBooks([]);
     setAiLoading(true);
 
@@ -616,6 +620,7 @@ Favori kategoriler: ${
       const res = await api.post<AiResponse>("/api/ai/recommend", payload);
       const data = res.data;
 
+      setProcessing(data.processing || null);
       setAiResult(data.text || "Herhangi bir öneri üretilemedi.");
       setSuggestedBooks(data.books || []);
     } catch (err: any) {
@@ -632,7 +637,7 @@ Favori kategoriler: ${
 
   return <SuggestionsStorefront
     books={books} suggestions={displayedSuggestions} loadingBooks={loadingBooks}
-    loading={aiLoading} error={aiError} result={aiResult} sections={aiSections}
+    processing={processing} loading={aiLoading} error={aiError} result={aiResult} sections={aiSections}
     goal={goal} onGoalChange={setGoal} mood={mood} onMoodChange={setMood}
     minutes={availableMinutes} onMinutesChange={setAvailableMinutes}
     preference={preferenceText} onPreferenceChange={setPreferenceText}

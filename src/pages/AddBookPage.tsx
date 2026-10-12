@@ -1,3 +1,4 @@
+import ProcessingBadge, { type ProcessingInfo } from "../components/ProcessingBadge";
 import PageLoading from "../components/feedback/PageLoading";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { useDraftField } from "../hooks/useDraftField";
@@ -103,6 +104,7 @@ export default function AddBookPage() {
   const [isbn, setIsbn] = useDraftField(draftKey, "isbn", "");
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [processing, setProcessing] = useState<ProcessingInfo | null>(null);
   const [searchInfo, setSearchInfo] = useState<string | null>(null);
   // 📷 Kamera ile barkod tarama
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -187,7 +189,7 @@ export default function AddBookPage() {
         signal: controller.signal,
       });
 
-      const response: { success: boolean; data?: IsbnBookResponse; message?: string } = await res.json();
+      const response: { success: boolean; data?: IsbnBookResponse; message?: string; processing?: ProcessingInfo } = await res.json();
       const data: IsbnBookResponse = response.data ?? { found: false, message: response.message };
 
       if (!res.ok || !data.found) {
@@ -198,6 +200,7 @@ export default function AddBookPage() {
         return;
       }
 
+      setProcessing(response.processing || null);
       setSearchInfo(
         data.missingFields?.length
           ? `ISBN ile eşleşen internet kaynaklarından bilgiler alındı. Doğrulanamayan alanlar: ${data.missingFields.join(", ")}.`
@@ -475,6 +478,7 @@ export default function AddBookPage() {
           </div>
         )}
 
+        {searchInfo && !searchError && <ProcessingBadge info={processing} />}
         {searchInfo && !searchError && (
           <div className="mt-2 inline-flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100">
             <Sparkles className="mt-[2px] w-3.5 h-3.5" />
