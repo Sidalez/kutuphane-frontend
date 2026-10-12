@@ -9,7 +9,7 @@ const envUrl = import.meta.env.VITE_API_URL;
 export const API_BASE_URL =
   (typeof envUrl === "string" && envUrl.trim().length > 0
     ? envUrl.trim()
-    : "http://localhost:3001");
+    : import.meta.env.PROD ? "https://kutuphane-backend.onrender.com" : "http://localhost:3001");
 
 console.log("API BASE URL:", API_BASE_URL);
 

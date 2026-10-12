@@ -1,11 +1,15 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { VitePWA } from "vite-plugin-pwa";
+import {execSync} from 'node:child_process';
+const buildSha=process.env.VERCEL_GIT_COMMIT_SHA||process.env.GITHUB_SHA||(()=>{try{return execSync('git rev-parse HEAD',{encoding:'utf8'}).trim()}catch{return 'local'}})();
 const currentBuildFiles = new Set<string>();
 export default defineConfig({
+  define:{__BUILD_SHA__:JSON.stringify(buildSha.slice(0,7))},
   plugins: [react(), {
     name: "track-current-build-files",
     generateBundle(_options, bundle) {
+      this.emitFile({type:'asset',fileName:'version.json',source:JSON.stringify({commit:buildSha.slice(0,7),builtAt:new Date().toISOString()})});
       currentBuildFiles.clear();
       Object.keys(bundle).forEach(file => currentBuildFiles.add(file));
     },

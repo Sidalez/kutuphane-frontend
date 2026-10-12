@@ -1,6 +1,7 @@
 import { useAppDialog } from "../components/feedback/DialogProvider";
 import { removeDeviceNotifications } from "../notifications/api";
 import {trackDeviceSession,currentSessionId,revokeSessions,clearSessionId} from './deviceSessions';
+import {bootstrapSecureSession} from './secureSession';
 // src/auth/AuthContext.tsx
 import {
   createContext,
@@ -61,7 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionError,setSessionError]=useState('');
-  useEffect(()=>{setSessionError('');if(user)return trackDeviceSession(user,setSessionError)},[user?.uid]);
+  useEffect(()=>{if(user){setSessionError('');return trackDeviceSession(user,setSessionError)}},[user?.uid]);
   const [profileLoadedUid, setProfileLoadedUid] = useState<string | null>(null);
   const profileLoading = Boolean(user && profileLoadedUid !== user.uid);
   const [avatar, setAvatar] = useState<{ uid: string; url: string } | null>(null);
@@ -89,16 +90,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
+    let cancelled=false;
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      if(!firebaseUser){setUser(null);setLoading(false);return;}
+      setLoading(true);
+      try{const ready=await bootstrapSecureSession(firebaseUser);if(!cancelled&&auth.currentUser?.uid===ready.uid)setUser(ready);}
+      catch(error){if(!cancelled&&auth.currentUser?.uid===firebaseUser.uid){setSessionError(error instanceof Error?error.message:'Oturum doğrulanamadı.');setUser(null);await signOut(auth);}}
+      finally{if(!cancelled)setLoading(false);}
     });
-    return () => unsub();
+    return () => {cancelled=true;unsub();};
   }, []);
 
   const signInWithGoogle = async () => {
     try {
       const cred = await signInWithPopup(auth, googleProvider);
+      await bootstrapSecureSession(cred.user);
       await upsertUserDoc(cred.user);
     } catch (error: any) {
       console.error("Google login error:", error);
@@ -120,6 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fullName: string
   ) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await bootstrapSecureSession(cred.user);
     if (fullName) {
       await updateProfile(cred.user, { displayName: fullName });
     }
@@ -128,6 +135,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithEmail = async (email: string, password: string) => {
     const cred = await signInWithEmailAndPassword(auth, email, password);
+    await bootstrapSecureSession(cred.user);
     await upsertUserDoc(cred.user);
   };
 
@@ -155,7 +163,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout,
       }}
     >
-      {sessionError&&user&&<p role="alert" className="fixed left-4 right-4 top-20 z-50 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{sessionError}</p>}
+      {sessionError&&<p role="alert" className="fixed left-4 right-4 top-20 z-50 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{sessionError}</p>}
       {children}
     </AuthContext.Provider>
   );

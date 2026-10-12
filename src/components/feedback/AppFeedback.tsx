@@ -18,8 +18,10 @@ export default function AppFeedback() {
   const [issue,setIssue] = useState<AppIssue|null>(null);
   useEffect(()=>{const handle=(event:Event)=>setIssue((event as CustomEvent<AppIssue>).detail);window.addEventListener("app-issue",handle);return()=>window.removeEventListener("app-issue",handle)},[]);
   const [notice, setNotice] = useState("");
+  const [registration,setRegistration]=useState<ServiceWorkerRegistration|null>(null);
+  useEffect(()=>{if(!registration)return;const check=()=>{if(navigator.onLine&&document.visibilityState==='visible')void registration.update().catch(()=>{});};const timer=window.setInterval(check,5*60000);window.addEventListener('focus',check);document.addEventListener('visibilitychange',check);return()=>{clearInterval(timer);window.removeEventListener('focus',check);document.removeEventListener('visibilitychange',check)}},[registration]);
   const iosInstall = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.matchMedia("(display-mode: standalone)").matches && !(navigator as Navigator & {standalone?: boolean}).standalone;
-  const { needRefresh: [needRefresh, setNeedRefresh], updateServiceWorker } = useRegisterSW({onRegisterError: error => console.warn("Çevrimdışı destek başlatılamadı:", error)});
+  const { needRefresh: [needRefresh, setNeedRefresh], updateServiceWorker } = useRegisterSW({onRegisteredSW:(_url,reg)=>setRegistration(reg||null),onRegisterError: error => console.warn("Çevrimdışı destek başlatılamadı:", error)});
   useEffect(() => {
     const on = () => setOnline(true), off = () => setOnline(false);
     const offer = (event: Event) => { event.preventDefault(); setInstall(event as InstallPrompt); };
