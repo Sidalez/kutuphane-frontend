@@ -22,7 +22,7 @@ export default function Layout() {
     return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", close); };
   }, [isSideOpen]);
   const tabs = [
-    { to: "/today", label: "Bugün", icon: Sun, active: pathname === "/today" },
+    { to: "/today", label: "Başlangıç", icon: Sun, active: pathname === "/today" },
     { to: "/library", label: "Kitaplar", icon: LibraryBig, active: pathname.startsWith("/library") || pathname.startsWith("/edit/") },
     { to: "/media", label: "Film & Dizi", icon: Clapperboard, active: pathname.startsWith("/media") && !pathname.includes("suggestions") && !pathname.includes("reports") },
     { to: isMedia ? "/add-media" : "/add-book", label: "Ekle", icon: Plus, active: pathname.startsWith("/add-"), primary: true },
