@@ -1,3 +1,4 @@
+import {localDate,readingMinutes} from "../utils/personalHub";
 import PageLoading from "../components/feedback/PageLoading";
 import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 import { useAppDialog } from "../components/feedback/DialogProvider";
@@ -145,7 +146,7 @@ export default function StatisticsPage() {
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Okuma_Raporu_${new Date().toISOString().slice(0, 10)}.pdf`);
+      pdf.save(`Okuma_Raporu_${localDate()}.pdf`);
     } catch (e) {
       console.error("PDF Hatası:", e);
       void dialog.alert({title:"Rapor hazırlanamadı",message:"PDF oluşturulurken bir sorun oluştu. Lütfen tekrar dene.",tone:"error",confirmLabel:"Anladım"});
@@ -218,7 +219,7 @@ export default function StatisticsPage() {
     allLogs.forEach((log) => {
       const dStr = log.date;
       const pages = Number(log.totalRead) || 0;
-      const mins = calculateMinutes(log.startTime, log.endTime);
+      const mins = (readingMinutes(log) ?? 0);
 
       dailyPagesMap.set(dStr, (dailyPagesMap.get(dStr) || 0) + pages);
       if (mins > 0) {
@@ -238,20 +239,20 @@ export default function StatisticsPage() {
       0
     );
     const periodMinutes = periodLogs.reduce(
-      (acc, l) => acc + calculateMinutes(l.startTime, l.endTime),
+      (acc, l) => acc + (readingMinutes(l) ?? 0),
       0
     );
 
     // Streak hesapları
     const sortedDates = Array.from(dailyPagesMap.keys()).sort();
     const today = new Date();
-    const todayStr = today.toISOString().slice(0, 10);
+    const todayStr = localDate(today);
     let currentStreak = 0;
     let tempDate = new Date();
     if (!dailyPagesMap.has(todayStr)) tempDate.setDate(tempDate.getDate() - 1);
 
     while (true) {
-      const dStr = tempDate.toISOString().slice(0, 10);
+      const dStr = localDate(tempDate);
       if (dailyPagesMap.has(dStr)) {
         currentStreak++;
         tempDate.setDate(tempDate.getDate() - 1);
@@ -314,7 +315,7 @@ export default function StatisticsPage() {
     // Bugün / dün / son 7 gün karşılaştırma
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+    const yesterdayStr = localDate(yesterday);
 
     const todayPages = dailyPagesMap.get(todayStr) || 0;
     const todayMinutes = dailyTimeMap.get(todayStr) || 0;
@@ -326,7 +327,7 @@ export default function StatisticsPage() {
     for (let i = 0; i < 7; i++) {
       const d = new Date();
       d.setDate(today.getDate() - i);
-      const ds = d.toISOString().slice(0, 10);
+      const ds = localDate(d);
       last7Pages += dailyPagesMap.get(ds) || 0;
       last7Minutes += dailyTimeMap.get(ds) || 0;
     }
@@ -437,7 +438,7 @@ export default function StatisticsPage() {
 
     periodLogs.forEach((l) => {
       const pages = Number(l.totalRead) || 0;
-      const mins = calculateMinutes(l.startTime, l.endTime);
+      const mins = (readingMinutes(l) ?? 0);
       if (!periodBookMap[l.bookId]) {
         periodBookMap[l.bookId] = { pages: 0, minutes: 0 };
       }
@@ -465,7 +466,7 @@ export default function StatisticsPage() {
       for (let i = 0; i < 7; i++) {
         const d = new Date(start);
         d.setDate(start.getDate() + i);
-        const dStr = d.toISOString().slice(0, 10);
+        const dStr = localDate(d);
         const dayName = d.toLocaleDateString("tr-TR", {
           weekday: "short",
         });
@@ -479,7 +480,7 @@ export default function StatisticsPage() {
       const days = end.getDate();
       for (let i = 1; i <= days; i++) {
         const d = new Date(start.getFullYear(), start.getMonth(), i);
-        const dStr = d.toISOString().slice(0, 10);
+        const dStr = localDate(d);
         chartData.push({
           name: String(i),
           pages: dailyPagesMap.get(dStr) || 0,
@@ -558,7 +559,7 @@ export default function StatisticsPage() {
     for (let i = 29; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-      const dStr = d.toISOString().slice(0, 10);
+      const dStr = localDate(d);
       const value = dailyPagesMap.get(dStr) || 0;
       heatmap.push({
         date: dStr,
@@ -607,7 +608,7 @@ if (bd && bd.value > 0) {
 
     const bookMinutesMap: Record<string, number> = {};
     allLogs.forEach((l) => {
-      const mins = calculateMinutes(l.startTime, l.endTime);
+      const mins = (readingMinutes(l) ?? 0);
       if (mins > 0) {
         bookMinutesMap[l.bookId] =
           (bookMinutesMap[l.bookId] || 0) + mins;
@@ -733,7 +734,7 @@ if (bd && bd.value > 0) {
         const bookLogs = allLogs.filter((l) => l.bookId === b.id);
         const totalMins = bookLogs.reduce(
           (acc, l) =>
-            acc + calculateMinutes(l.startTime, l.endTime),
+            acc + (readingMinutes(l) ?? 0),
           0
         );
         return { ...b, totalMins };

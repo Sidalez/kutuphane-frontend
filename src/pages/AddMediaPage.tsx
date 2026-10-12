@@ -1,3 +1,4 @@
+import {localDate} from "../utils/personalHub";
 import PageLoading from "../components/feedback/PageLoading";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { beginActivity } from "../requestActivity";
@@ -150,7 +151,7 @@ const DEFAULT_SHELVES: MediaShelf[] = [
 ];
 
 function todayInputValue() {
-  return new Date().toISOString().slice(0, 10);
+  return localDate();
 }
 
 function getMonthKey(date: string) {
@@ -851,13 +852,13 @@ export default function AddMediaPage() {
   const setQuickStartDate = (offsetDays = 0) => {
     const date = new Date();
     date.setDate(date.getDate() + offsetDays);
-    syncStartDate(date.toISOString().slice(0, 10));
+    syncStartDate(localDate(date));
   };
 
   const setQuickCompletionDate = (offsetDays = 0) => {
     const date = new Date();
     date.setDate(date.getDate() + offsetDays);
-    setCompletionDate(date.toISOString().slice(0, 10));
+    setCompletionDate(localDate(date));
   };
 
   const resetFormAfterSave = () => {

@@ -1,3 +1,4 @@
+import {localDate} from "../utils/personalHub";
 import PageLoading from "../components/feedback/PageLoading";
 import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 // src/pages/GoalsPage.tsx
@@ -106,12 +107,8 @@ const [deleting, setDeleting] = useState(false);
   // kitap hedefi için aramalı seçim
   const [bookSearch, setBookSearch] = useState("");
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const nextMonthStr = new Date(
-    new Date().setMonth(new Date().getMonth() + 1)
-  )
-    .toISOString()
-    .slice(0, 10);
+  const todayStr = localDate();
+  const nextMonthStr = localDate(new Date(new Date().setMonth(new Date().getMonth() + 1)));
 
   const [newGoal, setNewGoal] = useState<{
     title: string;
@@ -153,7 +150,7 @@ const [deleting, setDeleting] = useState(false);
         end.setDate(end.getDate() - 1);
       }
 
-      const endStr = end.toISOString().slice(0, 10);
+      const endStr = localDate(end);
 
       return {
         ...prev,
@@ -194,7 +191,7 @@ const [deleting, setDeleting] = useState(false);
               const dateStr: string =
                 typeof data.date === "string"
                   ? data.date
-                  : new Date().toISOString().slice(0, 10);
+                  : localDate();
 
               let pages = 0;
               if (typeof data.pagesRead === "number") {

@@ -1,3 +1,4 @@
+import {localDate} from "../utils/personalHub";
 // src/components/ReadingSessionForm.tsx
 import { useEffect, useMemo, useState, FormEvent } from "react";
 import { Clock, Timer, Play, Square, CalendarDays, Hash, StickyNote, ListChecks } from "lucide-react";
@@ -28,7 +29,7 @@ export default function ReadingSessionForm({
   const [mode, setMode] = useState<Mode>("manual");
 
   // Ortak alanlar
-  const [date, setDate] = useState(initialDate || new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(initialDate || localDate());
   const [pagesRead, setPagesRead] = useState<number | undefined>();
   const [startPage, setStartPage] = useState<number | undefined>();
   const [endPage, setEndPage] = useState<number | undefined>();

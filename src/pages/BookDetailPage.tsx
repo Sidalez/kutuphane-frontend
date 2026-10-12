@@ -1,3 +1,5 @@
+import {localDate} from "../utils/personalHub";
+import {elapsedReadingMs,restoreReadingTimer,pauseReadingTimer,resumeReadingTimer,finishReadingTimer,type ReadingTimer} from '../utils/readingTimer';
 import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 import PageLoading from "../components/feedback/PageLoading";
 // src/pages/BookDetailPage.tsx
@@ -220,7 +222,7 @@ export default function BookDetailPage() {
 
   const handleStartReading = async () => {
     if (!id || !user || !book) return;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDate();
 
     try {
       await updateDoc(doc(db, "books", id), {
@@ -278,7 +280,7 @@ export default function BookDetailPage() {
   /* --------------------------------------------------------------- */
   /*  OKUMA LOG EKLE                                                 */
   /* --------------------------------------------------------------- */
-  const handleAddLog = async () => {
+  const handleAddLog = async (measuredMinutes?:number) => {
     if (!id || !user || !book) return;
 
     if (!logDate || !logStartPage || !logEndPage) {
@@ -302,13 +304,13 @@ export default function BookDetailPage() {
     }
 
     const totalRead = end - start;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDate();
 
     try {
       const startInstant = logStartTime ? new Date(`${logDate}T${logStartTime}:00`) : null;
       const startedAt = startInstant && Number.isFinite(startInstant.getTime()) ? startInstant.toISOString() : null;
       const toMinutes = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
-      const durationMinutes = logStartTime && logEndTime ? (toMinutes(logEndTime) - toMinutes(logStartTime) + 1440) % 1440 : null;
+      const durationMinutes = measuredMinutes ?? (logStartTime && logEndTime ? (toMinutes(logEndTime) - toMinutes(logStartTime) + 1440) % 1440 : null);
       const payload = {
         date: logDate,
         startTime: logStartTime || null,
@@ -404,6 +406,7 @@ export default function BookDetailPage() {
       setLogEndPage("");
 
       showNotification("Okuma kaydı başarıyla eklendi.");
+      return true;
     } catch (e) {
       console.error(e);
       showNotification("Okuma kaydı eklenirken bir hata oluştu.");
@@ -962,7 +965,7 @@ interface LogsTabProps {
   logEndPage: string;
   setLogEndPage: (v: string) => void;
   calculatedReadPages: string;
-  onAddLog: () => void;
+  onAddLog: (measuredMinutes?:number) => Promise<boolean|void>;
   onStartReading: () => void;
   lastReadPage: number | null;
   bookId: string;
@@ -993,6 +996,9 @@ function LogsTab({
   const [timerStartMs, setTimerStartMs] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
+  const [timer,setTimer]=useState<ReadingTimer|null>(null);
+  const [timerBusy,setTimerBusy]=useState(false);
+  const [timerError,setTimerError]=useState('');
 
   // 🔥 Yeni: otomatik oturumun başlangıç sayfasını ve yüklenme durumunu tut
   const [autoStartPage, setAutoStartPage] = useState<number | null>(null);
@@ -1009,7 +1015,7 @@ function LogsTab({
     if (bookStatus !== "OKUNUYOR") return;
 
     if (!logDate) {
-      const today = new Date().toLocaleDateString("en-CA");
+      const today = localDate();
       setLogDate(today);
     }
 
@@ -1038,21 +1044,23 @@ function LogsTab({
         if (!snap.exists()) return;
         const data: any = snap.data();
 
-        // Bitmiş oturumu önemsemiyoruz
-        if (data.endedAt || typeof data.startAtMs !== "number") return;
+        const restored=restoreReadingTimer(data);
+        if(!restored)return;
         if (cancelled) return;
 
-        const startMs: number = data.startAtMs;
+        const startMs: number = restored.startAtMs;
         const startDate = new Date(startMs);
 
-        const dateStr = startDate.toLocaleDateString("en-CA");
+        const dateStr = /^\d{4}-\d{2}-\d{2}$/.test(data.date||'')?data.date:localDate(startDate);
         const hh = String(startDate.getHours()).padStart(2, "0");
         const mm = String(startDate.getMinutes()).padStart(2, "0");
 
         setMode("auto");
         setTimerStartMs(startMs);
-        setElapsedMs(Date.now() - startMs);
-        setIsRunning(true);
+        setTimer(restored);
+        setElapsedMs(elapsedReadingMs(restored));
+        setIsRunning(restored.status==='running');
+        if(restored.endAtMs){const end=new Date(restored.endAtMs);setLogEndTime(`${String(end.getHours()).padStart(2,'0')}:${String(end.getMinutes()).padStart(2,'0')}`);}
 
         // Tarih & saat alanlarını tekrar doldur
         setLogDate(dateStr);
@@ -1067,6 +1075,8 @@ function LogsTab({
           setLogStartPage(String(startPageNumber));
           setAutoStartPage(startPageNumber);
         }
+      } catch {
+        if(!cancelled)setTimerError('Okuma oturumu yüklenemedi. Sayfayı yenileyip tekrar dene.');
       } finally {
         if (!cancelled) setSessionLoaded(true);
       }
@@ -1098,21 +1108,24 @@ function LogsTab({
 
   // Kronometre tick
   useEffect(() => {
-    if (!isRunning || !timerStartMs) return;
+    if (!timer || timer.status!=='running') return;
 
     const id = setInterval(() => {
-      setElapsedMs(Date.now() - timerStartMs);
+      setElapsedMs(elapsedReadingMs(timer));
     }, 1000);
 
     return () => clearInterval(id);
-  }, [isRunning, timerStartMs]);
+  }, [timer]);
   const handleResetAutoSession = async () => {
+    if(timerBusy)return;
+    if(!navigator.onLine){setTimerError('Oturumu sıfırlamak için internet bağlantısı gerekiyor.');return;}
+    setTimerBusy(true);setTimerError('');
     // Firestore'daki session'ı tamamen sil
     if (sessionDocRef) {
       try {
         await deleteDoc(sessionDocRef);
       } catch (e) {
-        console.error("Oturum sıfırlanırken hata:", e);
+        setTimerError('Oturum sıfırlanamadı. Tekrar dene.');setTimerBusy(false);return;
       }
     }
 
@@ -1125,6 +1138,7 @@ function LogsTab({
     setLogStartPage("");
     setLogEndPage("");
     setAutoStartPage(null);
+    setTimer(null);setTimerBusy(false);
   };
 
   const formatElapsed = (ms: number) => {
@@ -1141,83 +1155,43 @@ function LogsTab({
       .padStart(2, "0")} sn`;
   };
 
-  const handleStartAutoSession = async () => {
-    if (!sessionDocRef || isRunning) return;
-
-    const now = new Date();
-    const nowMs = now.getTime();
-    const today = now.toLocaleDateString("en-CA");
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mm = String(now.getMinutes()).padStart(2, "0");
-
-    // An automatic session starts now, even if an older manual date was selected.
-    setLogDate(today);
-
-    // Başlangıç saati her zaman şu an
-    setLogStartTime(`${hh}:${mm}`);
-    setLogEndTime("");
-
-    // Başlangıç sayfasını string'ten sayıya çevir
-    const parsed = parseInt(logStartPage || "", 10);
-    const startPageNumber = !Number.isNaN(parsed)
-      ? parsed
-      : lastReadPage && lastReadPage > 0
-      ? lastReadPage
-      : 0;
-
-    // 🔥 Firestore'a aktif oturumu yaz
-    await setDoc(sessionDocRef, {
-      bookId,
-      userId,
-      startPage: startPageNumber,
-      startAt: serverTimestamp(),
-      startAtMs: nowMs, // timer için direkt milisaniye
-      endedAt: null,
-      createdAt: serverTimestamp(),
-    });
-
-    setMode("auto");
-    setTimerStartMs(nowMs);
-    setElapsedMs(0);
-    setIsRunning(true);
-    setAutoStartPage(startPageNumber);
+  const persistTimer = async (next:ReadingTimer,extra:Record<string,unknown>={}) => {
+    if(!sessionDocRef)return false;
+    if(!navigator.onLine){setTimerError('Sayacı güncellemek için internet bağlantısı gerekiyor.');return false;}
+    setTimerBusy(true);setTimerError('');
+    try {
+      await setDoc(sessionDocRef,{...next,...extra,bookId,userId,endedAt:next.status==='finished'?serverTimestamp():null},{merge:true});
+      setTimer(next);setTimerStartMs(next.startAtMs);setElapsedMs(elapsedReadingMs(next));setIsRunning(next.status==='running');return true;
+    }catch{setTimerError('Sayaç kaydedilemedi. Bağlantını kontrol edip tekrar dene.');return false;}
+    finally{setTimerBusy(false)}
   };
-
-
-  // 🔸 OTOMATİK MOD: Bitiş saatini de sistemden al
-  const handleStopAutoSession = async () => {
-    // Çalışmıyorsa veya başlangıç zamanı yoksa hiçbir şey yapma
-    if (!isRunning || !timerStartMs) return;
-
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mm = String(now.getMinutes()).padStart(2, "0");
-
-    // Bitiş saatini form alanına yaz
-    const endTimeStr = `${hh}:${mm}`;
-    setLogEndTime(endTimeStr);
-
-    // Geçen süreyi hesapla (ms cinsinden)
-    const elapsed = now.getTime() - timerStartMs;
-    setElapsedMs(elapsed);
-
-    // Timer’ı durdur (artık saymayı bıraksın)
-    setIsRunning(false);
-
-    // 🔥 Firestore'daki oturumu "bitti" olarak işaretle
-    if (sessionDocRef) {
-      try {
-        await updateDoc(sessionDocRef, {
-          endedAt: serverTimestamp(),
-          endAtMs: now.getTime(),
-        });
-      } catch (e) {
-        console.error("Oturum bitirme güncellenirken hata:", e);
-      }
+  const handleStartAutoSession = async () => {
+    if(timerBusy||!sessionLoaded||isRunning||timer?.status==='finished')return;
+    const now=Date.now();
+    if(timer?.status==='paused'){await persistTimer(resumeReadingTimer(timer,now));return;}
+    const parsed=Number(logStartPage);const startPage=Number.isFinite(parsed)&&parsed>0?parsed:lastReadPage||1;
+    const next:ReadingTimer={startAtMs:now,segmentStartedAtMs:now,accumulatedMs:0,status:'running'};
+    if(await persistTimer(next,{startPage,date:localDate(new Date(now)),createdAt:serverTimestamp()})){
+      const date=new Date(now);setMode('auto');setLogDate(localDate(date));setLogStartTime(`${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`);setLogEndTime('');setAutoStartPage(startPage);setLogStartPage(String(startPage));
     }
   };
-
-
+  const handlePauseAutoSession = async () => {
+    if(!timer||timerBusy||timer.status!=='running')return;
+    await persistTimer(pauseReadingTimer(timer));
+  };
+  const handleStopAutoSession = async () => {
+    if(!timer||timerBusy||timer.status==='finished')return;
+    const next=finishReadingTimer(timer);
+    if(await persistTimer(next)){const date=new Date(next.endAtMs!);setLogEndTime(`${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`);}
+  };
+  const saveLog = async () => {
+    if(timerBusy)return;
+    if(!navigator.onLine){setTimerError('Okuma kaydını tamamlamak için internet bağlantısı gerekiyor.');return;}
+    if(mode==='auto'&&timer?.status!=='finished'){setTimerError('Önce okumayı bitir, ardından bitiş sayfasını yazıp kaydet.');return;}
+    setTimerBusy(true);setTimerError('');
+    try{const saved=await onAddLog(mode==='auto'&&timer?Math.round(elapsedReadingMs(timer)/600)/100:undefined);if(saved){setTimer(null);setTimerStartMs(null);setElapsedMs(0);setIsRunning(false);setAutoStartPage(null);}}
+    finally{setTimerBusy(false)}
+  };
   return (
     <div className="space-y-4">
       {/* Form kartı */}
@@ -1234,7 +1208,7 @@ function LogsTab({
             </span>
             <button
               type="button"
-              onClick={() => setMode("manual")}
+              disabled={!!timer || timerBusy} onClick={() => setMode("manual")}
               className={`px-2.5 py-1 rounded-full font-medium ${
                 mode === "manual"
                   ? "bg-white dark:bg-slate-800 text-amber-700 shadow"
@@ -1354,46 +1328,43 @@ function LogsTab({
                               {formatElapsed(elapsedMs)}
                             </div>
                           </>
-                        ) : logEndTime ? (
+                        ) : timer ? (
                           <>
                             <div className="text-[11px] text-slate-500">
-                              Oturum süresi
+                              {timer.status==='paused'?'Duraklatıldı':'Oturum süresi'}
                             </div>
                             <div className="text-sm font-semibold">
-                              {elapsedMs > 0
-                                ? formatElapsed(elapsedMs)
-                                : "Kaydedildi"}
+                              {formatElapsed(elapsedMs)}
                             </div>
                           </>
                         ) : (
                           <div className="text-[11px] text-slate-500">
-                            Başlat’a bastığında başlangıç saati ve süre otomatik
-                            alınır. Bitir dediğinde bitiş saati yazılır.
+                            Başlat’a bastığında süre otomatik ölçülür. Molada duraklatabilir, bitince kaydedebilirsin.
                           </div>
                         )}
                       </div>
                                        {isRunning ? (
                         <button
                           type="button"
-                          onClick={handleStopAutoSession}
+                          disabled={timerBusy} onClick={handlePauseAutoSession}
                           className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-[11px] font-semibold shadow hover:bg-red-600"
                         >
-                          Durdur
+                          Duraklat
                         </button>
                       ) : (
                         <div className="flex gap-1">
                           <button
                             type="button"
-                            onClick={handleStartAutoSession}
+                            disabled={timerBusy || !sessionLoaded || timer?.status === "finished"} onClick={handleStartAutoSession}
                             className="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-[11px] font-semibold shadow hover:bg-amber-600"
                           >
-                            Başlat
+                            {timer?.status === "paused" ? "Devam et" : "Başlat"}
                           </button>
 
                           {(timerStartMs || elapsedMs > 0) && (
                             <button
                               type="button"
-                              onClick={handleResetAutoSession}
+                              disabled={timerBusy} onClick={handleResetAutoSession}
                               className="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-[11px] font-semibold shadow hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
                             >
                               Sıfırla
@@ -1412,7 +1383,7 @@ function LogsTab({
                 </div>
               </div>
 
-              {/* Sayfa satırları */}
+              {timer && timer.status !== "finished" && <button type="button" disabled={timerBusy} onClick={handleStopAutoSession} className="mb-4 min-h-11 rounded-xl bg-orange-600 px-4 text-sm font-semibold text-white disabled:opacity-50">Okumayı bitir</button>}{timer?.status === "paused" && <p role="status" className="mb-3 text-sm text-amber-700">Sayaç duraklatıldı. Mola süresi okuma süresine eklenmez.</p>}{timer?.status === "finished" && <p role="status" className="mb-3 text-sm text-emerald-700">Okuma bitti. Bitiş sayfasını girip kaydını tamamla.</p>}{timerError && <p role="alert" className="mb-3 text-sm text-red-600">{timerError}</p>}{/* Sayfa satırları */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-slate-600">
@@ -1475,7 +1446,7 @@ function LogsTab({
               <div className="pt-2">
                 <button
                   type="button"
-                  onClick={onAddLog}
+                  onClick={saveLog} disabled={timerBusy || (mode === "auto" && timer?.status !== "finished")}
                   className="w-full md:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white font-semibold text-sm shadow-md transition"
                 >
                   + Kayıt Ekle

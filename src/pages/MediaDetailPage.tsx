@@ -1,3 +1,4 @@
+import {localDate} from "../utils/personalHub";
 import PageLoading from "../components/feedback/PageLoading";
 import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 // src/pages/MediaDetailPage.tsx
@@ -131,7 +132,7 @@ const DEFAULT_SHELVES: MediaShelf[] = [
 ];
 
 function todayInputValue() {
-  return new Date().toISOString().slice(0, 10);
+  return localDate();
 }
 
 function toInputDate(value?: unknown) {
@@ -149,7 +150,7 @@ function toInputDate(value?: unknown) {
     return String(raw).slice(0, 10);
   }
 
-  return date.toISOString().slice(0, 10);
+  return localDate(date);
 }
 
 function getMonthKey(date: string) {
