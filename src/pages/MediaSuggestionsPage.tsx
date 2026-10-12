@@ -292,7 +292,7 @@ function normalizeFiveRating(value: any) {
 
 function buildHistory(items: MediaItem[]) {
   const highRated = items
-    .filter((item) => normalizeFiveRating(item.userRating) >= 4)
+    .filter((item) => item.status !== "BIRAKILDI" && normalizeFiveRating(item.userRating) >= 4)
     .map((item) => ({
       title: item.title,
       tmdbId: item.tmdbId,
@@ -304,7 +304,7 @@ function buildHistory(items: MediaItem[]) {
   const liked = items
     .filter(
       (item) =>
-        item.status === "IZLENDI" || normalizeFiveRating(item.userRating) >= 4,
+        item.status !== "BIRAKILDI" && normalizeFiveRating(item.userRating) >= 4,
     )
     .map((item) => ({
       title: item.title,
@@ -582,7 +582,7 @@ export default function MediaSuggestionsPage() {
   const [provider, setProvider] = useState("");
   const [description, setDescription] = useState("");
   const [similarQuery, setSimilarQuery] = useState("");
-  const [genres, setGenres] = useState<string[]>(["Dram", "Gizem"]);
+  const [genres, setGenres] = useState<string[]>([]);
 
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
   const [detailsCache, setDetailsCache] = useState<
