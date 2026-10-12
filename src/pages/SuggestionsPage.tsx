@@ -1,3 +1,4 @@
+import { useRecommendationFeedback, type FeedbackItem, type FeedbackEntry } from "../hooks/useRecommendationFeedback";
 import type { ProcessingInfo } from "../components/ProcessingBadge";
 // src/pages/SuggestionsPage.tsx
 import { useEffect, useMemo, useState } from "react";
@@ -582,7 +583,9 @@ Favori kategoriler: ${
 
   const aiSections = useMemo(() => parseAiResult(aiResult), [aiResult]);
 
-  const handleGenerate = async () => {
+  const feedback = useRecommendationFeedback(user?.uid);
+  const handleGenerate = async (customPreference?: string, customGoal?: RecommendGoal) => {
+    if (!feedback.ready || feedback.busy || aiLoading) return;
     setAiError(null);
     setAiResult(null);
     setProcessing(null);
@@ -591,10 +594,11 @@ Favori kategoriler: ${
 
     try {
       const payload = {
-        goal,
+        goal: customGoal || goal,
         mood,
         availableMinutes: Number(availableMinutes) || 0,
-        preferenceText,
+        preferenceText: customPreference || preferenceText,
+        recommendationFeedback: feedback.entries.filter(entry=>entry.kind === "BOOK"),
         tone,
         summary: summary.summaryText,
         sampleBooks: summary.sampleBooks,
@@ -641,6 +645,13 @@ Favori kategoriler: ${
     goal={goal} onGoalChange={setGoal} mood={mood} onMoodChange={setMood}
     minutes={availableMinutes} onMinutesChange={setAvailableMinutes}
     preference={preferenceText} onPreferenceChange={setPreferenceText}
-    onGenerate={handleGenerate}
+    feedback={feedback}
+    onFeedback={async (item: FeedbackItem,action: FeedbackEntry["action"])=>{
+      if(await feedback.save(item,action) && action==="liked") {
+        const preference=`${item.title} (${item.author || ""}) kitabına benzer, farklı kitaplar öner.`;
+        setPreferenceText(preference);setGoal("choose_new_book");void handleGenerate(preference,"choose_new_book");
+      }
+    }}
+    onGenerate={()=>void handleGenerate()}
   />;
 }

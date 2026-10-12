@@ -1,3 +1,5 @@
+import RecommendationFeedback, { FeedbackHistory } from "../components/RecommendationFeedback";
+import { useRecommendationFeedback } from "../hooks/useRecommendationFeedback";
 import ProcessingBadge, { type ProcessingInfo } from "../components/ProcessingBadge";
 import PageLoading from "../components/feedback/PageLoading";
 import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
@@ -727,7 +729,9 @@ export default function MediaSuggestionsPage() {
     );
   };
 
-  const runSuggestions = async (overrideMode?: SuggestionMode) => {
+  const feedback = useRecommendationFeedback(user?.uid);
+  const runSuggestions = async (overrideMode?: SuggestionMode, seedTitle?: string, seedType?: "TV" | "MOVIE") => {
+    if (!feedback.ready || feedback.busy) return;
     if (loading || pageLoading) return;
     const finalMode = overrideMode || mode;
     if (finalMode === "SIMILAR" && !similarQuery.trim()) {
@@ -748,13 +752,13 @@ export default function MediaSuggestionsPage() {
       try { const saved = JSON.parse(sessionStorage.getItem(seenKey) || "[]"); if (Array.isArray(saved)) excludedSuggestions = saved.filter(value=>typeof value === "string").slice(-120); } catch {}
       const body = {
         mode: finalMode,
-        type,
+        type: seedType || type,
         description,
         genres,
         provider,
-        query: similarQuery,
-        history,
-        excludedSuggestions,
+        query: seedTitle || similarQuery,
+        history: {...history, recommendationFeedback:feedback.entries.filter(entry=>entry.kind!=="BOOK")},
+        excludedSuggestions: [...excludedSuggestions,...feedback.entries.filter(entry=>entry.kind!=="BOOK" && entry.action!=="liked").map(entry=>entry.key)],
       };
 
       const data = await postJson<{
@@ -1126,6 +1130,9 @@ export default function MediaSuggestionsPage() {
                 </button>
               </div>
             )}
+            <FeedbackHistory entries={feedback.entries.filter(entry=>entry.kind!=="BOOK")} busy={feedback.busy} onRestore={item=>void feedback.save(item,null)} />
+            {feedback.error && <p role="alert" className="mt-3 text-sm text-red-600">{feedback.error}</p>}
+            {feedback.last && <div role="status" className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-orange-50 p-3 text-xs dark:bg-slate-800"><span>“{feedback.last.title}” için tercihin kaydedildi.</span><button type="button" disabled={feedback.busy} className="min-h-11 font-semibold text-orange-600" onClick={()=>void feedback.save(feedback.last!,null)}>Geri al</button></div>}
             {!loading && <ProcessingBadge info={processing} />}
             {catalogNotice && <p role="status" className="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">{catalogNotice}</p>}
             {error && (
@@ -1254,7 +1261,7 @@ export default function MediaSuggestionsPage() {
             </div>
           ) : (
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {suggestions.map((item, index) => {
+              {suggestions.filter(item=>!feedback.isExcluded(`${item.type}:${item.tmdbId}`)).map((item, index) => {
                 const key = getSuggestionKey(item),
                   detail = detailsCache[key];
                 return (
@@ -1343,6 +1350,9 @@ export default function MediaSuggestionsPage() {
                           {getPlatformsText(detail, item)}
                         </p>
                       )}
+                      <RecommendationFeedback item={{key:`${item.type}:${item.tmdbId}`,kind:item.type,title:item.title,tmdbId:item.tmdbId}} busy={feedback.busy || loading || !feedback.ready} onFeedback={async (target,action)=>{
+                        if(await feedback.save(target,action) && action==="liked") {setMode("SIMILAR");setSimilarQuery(target.title);void runSuggestions("SIMILAR",target.title,target.kind === "BOOK" ? undefined : target.kind);}
+                      }} />
                       <div className="mt-auto flex items-center gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
                         <button
                           type="button"
