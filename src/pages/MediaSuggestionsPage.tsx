@@ -76,6 +76,9 @@ type SuggestionItem = {
   platforms?: string[];
   reason?: string;
   matchScore?: number;
+  numberOfEpisodes?: number;
+  numberOfSeasons?: number;
+  isMiniseries?: boolean;
 
   aiReason?: string;
   qualityComment?: string;
@@ -731,6 +734,9 @@ export default function MediaSuggestionsPage() {
     setSelectedDetails(null);
 
     try {
+      let excludedSuggestions: string[] = [];
+      const seenKey = `media-suggestions-seen:${user?.uid || "guest"}`;
+      try { const saved = JSON.parse(sessionStorage.getItem(seenKey) || "[]"); if (Array.isArray(saved)) excludedSuggestions = saved.filter(value=>typeof value === "string").slice(-120); } catch {}
       const body = {
         mode: finalMode,
         type,
@@ -739,6 +745,7 @@ export default function MediaSuggestionsPage() {
         provider,
         query: similarQuery,
         history,
+        excludedSuggestions,
       };
 
       const data = await postJson<{
@@ -749,6 +756,7 @@ export default function MediaSuggestionsPage() {
       }>("/api/media/suggestions", body);
 
       const list = Array.isArray(data.data) ? data.data : [];
+      try { sessionStorage.setItem(seenKey,JSON.stringify([...new Set([...excludedSuggestions,...list.map(item=>`${item.type}:${item.tmdbId}`)])].slice(-120))); } catch {}
 
       if (finalMode === "WEEKEND") {
         setSuggestions(list.slice(0, 3));
@@ -997,6 +1005,7 @@ export default function MediaSuggestionsPage() {
                 "İçimi ısıtan bir hikâye",
                 "Gerçek olaylardan",
                 "Kafa dağıtmalık",
+                "Mini dizi istiyorum, yerli diziler de olabilir",
               ].map((mood) => (
                 <button
                   type="button"
@@ -1288,7 +1297,8 @@ export default function MediaSuggestionsPage() {
                           </>
                         ) : null}
                       </div>
-                      <h3 className="mt-2 text-xl font-semibold tracking-tight">
+                      {item.isMiniseries && <p className="mt-2 text-xs font-semibold text-orange-600">Mini dizi · {item.numberOfSeasons} sezon · {item.numberOfEpisodes} bölüm</p>}
+                    <h3 className="mt-2 text-xl font-semibold tracking-tight">
                         {item.title}
                       </h3>
                       {item.originalTitle &&
