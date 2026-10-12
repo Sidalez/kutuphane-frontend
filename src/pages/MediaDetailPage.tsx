@@ -1691,6 +1691,9 @@ export default function MediaDetailPage() {
             : null
           : null;
 
+      const hasNewWatchActivity = item.type === "TV" ? newEpisodes.length > 0 :
+        (status === "IZLENDI" && item.status !== "IZLENDI") ||
+        (status === "IZLENIYOR" && Number(nextWatchedMinutes || 0) > Number(item.watchedMinutes || 0));
       const actionAtIso = new Date().toISOString();
 
       const actionDetails = buildActionDetails({
@@ -1743,6 +1746,7 @@ export default function MediaDetailPage() {
 
       const updatePayload = removeUndefinedDeep({
         status,
+        lastWatchActivityAt: hasNewWatchActivity ? serverTimestamp() : undefined,
 
         watchedMinutes: nextWatchedMinutes,
 

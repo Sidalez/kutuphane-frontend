@@ -1379,6 +1379,7 @@ export default function AddMediaPage() {
         updatedAt: serverTimestamp(),
         lastActionAt: serverTimestamp(),
         lastViewedAt: null,
+        lastWatchActivityAt: (selected.type === "TV" ? watchedEpisodeList.length > 0 : status === "IZLENDI" || (status === "IZLENIYOR" && Number(cleanPayload.watchedMinutes) > 0)) ? serverTimestamp() : null,
       });
 
       await createWatchLogIfNeeded(mediaDocRef.id, {

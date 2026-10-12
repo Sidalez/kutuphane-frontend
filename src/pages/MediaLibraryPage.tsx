@@ -1,3 +1,4 @@
+import { compareLastWatched } from "../utils/mediaWatchOrder";
 import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 import PageLoading from "../components/feedback/PageLoading";
 // src/pages/MediaLibraryPage.tsx
@@ -408,19 +409,7 @@ export default function MediaLibraryPage() {
           ...(document.data() as Omit<MediaItem, "id">),
         }));
 
-        data.sort((a, b) => {
-          const bTime =
-            getMillis((b as any).lastActionAt) ||
-            getMillis(b.updatedAt) ||
-            getMillis(b.createdAt);
-
-          const aTime =
-            getMillis((a as any).lastActionAt) ||
-            getMillis(a.updatedAt) ||
-            getMillis(a.createdAt);
-
-          return bTime - aTime;
-        });
+        data.sort(compareLastWatched);
 
         setItems(data);
         setLoading(false);
@@ -566,7 +555,7 @@ export default function MediaLibraryPage() {
 
             <p className="text-sm text-slate-600 dark:text-slate-400 max-w-xl">
               İzlenecekleri planla, izlediklerini kaydet, yarım kalan filmleri
-              ve sezon sezon takip ettiğin dizileri tek yerden yönet.
+              ve sezon sezon takip ettiğin dizileri tek yerden yönet. En son izlediklerin üstte.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 mt-3 w-full md:w-auto">
