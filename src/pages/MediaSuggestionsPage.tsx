@@ -2,9 +2,13 @@ import PageLoading from "../components/feedback/PageLoading";
 import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 // src/pages/MediaSuggestionsPage.tsx
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import {
+  ArrowUpRight,
+  ChevronRight,
+  SlidersHorizontal,
+  RotateCcw,
   AlertTriangle,
   Brain,
   Calendar,
@@ -188,7 +192,8 @@ const modes: {
     key: "WATCHING_SIMILAR",
     title: "Devam eden dizilerine benzer",
     shortTitle: "Devam eden",
-    description: "Şu an izlediğin dizilerden yola çıkarak yakın diziler önerir.",
+    description:
+      "Şu an izlediğin dizilerden yola çıkarak yakın diziler önerir.",
     icon: Tv,
   },
   {
@@ -299,7 +304,7 @@ function buildHistory(items: MediaItem[]) {
   const liked = items
     .filter(
       (item) =>
-        item.status === "IZLENDI" || normalizeFiveRating(item.userRating) >= 4
+        item.status === "IZLENDI" || normalizeFiveRating(item.userRating) >= 4,
     )
     .map((item) => ({
       title: item.title,
@@ -412,7 +417,10 @@ function getCrewText(details?: MediaDetails | null) {
   return (details.creators || []).slice(0, 2).join(", ");
 }
 
-function getPlatformsText(details?: MediaDetails | null, item?: SuggestionItem) {
+function getPlatformsText(
+  details?: MediaDetails | null,
+  item?: SuggestionItem,
+) {
   const platforms = details?.platforms?.length
     ? details.platforms
     : item?.platforms || [];
@@ -428,7 +436,7 @@ function getMatchTone(score?: number) {
   }
 
   if (n >= 75) {
-    return "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-200 dark:border-indigo-800";
+    return "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-200 dark:border-orange-800";
   }
 
   return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-200 dark:border-amber-800";
@@ -517,7 +525,7 @@ function PersonAvatar({ person }: { person: CastDetail }) {
   return (
     <div className="rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2">
       <div className="flex gap-2">
-        <div className="h-16 w-12 rounded-xl overflow-hidden bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-slate-800 dark:to-slate-900 flex-shrink-0">
+        <div className="h-16 w-12 rounded-xl overflow-hidden bg-gradient-to-br from-orange-100 to-orange-100 dark:from-slate-800 dark:to-slate-900 flex-shrink-0">
           {imageUrl ? (
             <img
               src={imageUrl}
@@ -528,14 +536,14 @@ function PersonAvatar({ person }: { person: CastDetail }) {
               className="h-full w-full object-cover block"
             />
           ) : (
-            <div className="h-full w-full flex items-center justify-center text-[13px] font-black text-indigo-700 dark:text-indigo-200">
+            <div className="h-full w-full flex items-center justify-center text-[13px] font-semibold text-orange-700 dark:text-orange-200">
               {getInitials(person.name)}
             </div>
           )}
         </div>
 
         <div className="min-w-0">
-          <p className="text-xs font-black text-slate-900 dark:text-slate-100 line-clamp-1">
+          <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 line-clamp-1">
             {person.name}
           </p>
 
@@ -552,7 +560,7 @@ function PersonAvatar({ person }: { person: CastDetail }) {
           )}
 
           {person.episodeCount ? (
-            <p className="mt-0.5 text-[10px] text-purple-500 font-bold">
+            <p className="mt-0.5 text-[10px] text-orange-500 font-bold">
               {person.episodeCount} bölüm
             </p>
           ) : null}
@@ -562,49 +570,28 @@ function PersonAvatar({ person }: { person: CastDetail }) {
   );
 }
 
-function StatChip({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-white/80 dark:border-slate-800 px-4 py-3 shadow-sm">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] uppercase tracking-[0.14em] font-bold text-slate-500">
-          {label}
-        </p>
-        {icon}
-      </div>
-      <p className="mt-1 text-xl font-black text-slate-900 dark:text-slate-50">
-        {value}
-      </p>
-    </div>
-  );
-}
-
 export default function MediaSuggestionsPage() {
   const { user } = useAuth();
+  const detailPanel = useRef<HTMLDivElement>(null);
+  const detailRequest = useRef(0);
 
   const [items, setItems] = useState<MediaItem[]>([]);
   const [mode, setMode] = useState<SuggestionMode>("TODAY");
   const [type, setType] = useState<MediaType>("ALL");
+  const [showFilters, setShowFilters] = useState(false);
   const [provider, setProvider] = useState("");
   const [description, setDescription] = useState("");
   const [similarQuery, setSimilarQuery] = useState("");
   const [genres, setGenres] = useState<string[]>(["Dram", "Gizem"]);
 
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
-  const [detailsCache, setDetailsCache] = useState<Record<string, MediaDetails>>(
-    {}
-  );
+  const [detailsCache, setDetailsCache] = useState<
+    Record<string, MediaDetails>
+  >({});
   const [selectedSuggestion, setSelectedSuggestion] =
     useState<SuggestionItem | null>(null);
   const [selectedDetails, setSelectedDetails] = useState<MediaDetails | null>(
-    null
+    null,
   );
 
   const [loading, setLoading] = useState(false);
@@ -612,11 +599,64 @@ export default function MediaSuggestionsPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!selectedSuggestion) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    detailPanel.current?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedSuggestion(null);
+        setSelectedDetails(null);
+      }
+      if (event.key !== "Tab") return;
+      const controls = detailPanel.current?.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input, select, textarea, [tabindex="0"]',
+      );
+      if (!controls?.length) return;
+      const first = controls[0],
+        last = controls[controls.length - 1];
+      if (
+        event.shiftKey &&
+        (document.activeElement === first ||
+          document.activeElement === detailPanel.current)
+      ) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", keydown);
+    return () => {
+      document.removeEventListener("keydown", keydown);
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
+  }, [selectedSuggestion]);
+
+  useEffect(() => {
+    if (!suggestions.length) return;
+    const frame = requestAnimationFrame(() =>
+      document
+        .getElementById("discovery-results")
+        ?.scrollIntoView({
+          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? "auto"
+            : "smooth",
+          block: "start",
+        }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [suggestions]);
+
   const history = useMemo(() => buildHistory(items), [items]);
 
   const selectedMode = useMemo(
     () => modes.find((item) => item.key === mode) || modes[0],
-    [mode]
+    [mode],
   );
 
   const topGenresFromHistory = useMemo(() => {
@@ -645,7 +685,7 @@ export default function MediaSuggestionsPage() {
 
     const q = query(
       collection(db, "mediaItems"),
-      where("userId", "==", user.uid)
+      where("userId", "==", user.uid),
     );
 
     const unsub = onSnapshot(
@@ -663,7 +703,7 @@ export default function MediaSuggestionsPage() {
         console.error("Öneri geçmişi okunamadı:", err);
         setError(err?.message || "İzleme geçmişi okunamadı.");
         setPageLoading(false);
-      }
+      },
     );
 
     return () => unsub();
@@ -673,12 +713,17 @@ export default function MediaSuggestionsPage() {
     setGenres((prev) =>
       prev.includes(genre)
         ? prev.filter((item) => item !== genre)
-        : [...prev, genre]
+        : [...prev, genre],
     );
   };
 
   const runSuggestions = async (overrideMode?: SuggestionMode) => {
+    if (loading || pageLoading) return;
     const finalMode = overrideMode || mode;
+    if (finalMode === "SIMILAR" && !similarQuery.trim()) {
+      setError("Benzerini bulmak istediğin film veya dizinin adını yaz.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -714,7 +759,7 @@ export default function MediaSuggestionsPage() {
       if (list.length === 0) {
         setError(
           data.message ||
-            "Bu filtrelerle öneri bulunamadı. Tür, platform veya açıklamayı değiştirerek tekrar dene."
+            "Bu filtrelerle öneri bulunamadı. Tür, platform veya açıklamayı değiştirerek tekrar dene.",
         );
       }
     } catch (err: any) {
@@ -728,6 +773,7 @@ export default function MediaSuggestionsPage() {
 
   const loadDetails = async (item: SuggestionItem) => {
     const key = getSuggestionKey(item);
+    const request = ++detailRequest.current;
 
     setSelectedSuggestion(item);
     setSelectedDetails(detailsCache[key] || null);
@@ -756,19 +802,20 @@ export default function MediaSuggestionsPage() {
         [key]: details,
       }));
 
-      setSelectedDetails(details);
+      if (detailRequest.current === request) setSelectedDetails(details);
     } catch (err: any) {
       console.error("Öneri detay hatası:", err);
-      setError(err?.message || "Detaylar alınırken hata oluştu.");
+      if (detailRequest.current === request)
+        setError(err?.message || "Detaylar alınırken hata oluştu.");
     } finally {
-      setDetailLoadingKey(null);
+      if (detailRequest.current === request) setDetailLoadingKey(null);
     }
   };
 
   if (!user) {
     return (
       <div className="max-w-5xl mx-auto py-10">
-        <div className="rounded-3xl border border-indigo-100/70 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 p-8 text-center shadow-sm">
+        <div className="rounded-3xl border border-orange-100/70 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 p-8 text-center shadow-sm">
           <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">
             Önerileri görmek için giriş yapmalısın.
           </p>
@@ -785,585 +832,522 @@ export default function MediaSuggestionsPage() {
 
   return (
     <>
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div
-          className="
-            relative overflow-hidden rounded-[32px] border
-            border-indigo-100/70 dark:border-slate-800/80
-            bg-gradient-to-br from-indigo-50 via-purple-50 to-slate-100
-            dark:from-slate-950 dark:via-slate-900 dark:to-slate-950
-            px-6 py-6 shadow-sm
-          "
-        >
-          <div className="absolute -top-24 right-0 h-56 w-56 rounded-full bg-purple-300/20 blur-3xl" />
-          <div className="absolute -bottom-24 left-0 h-56 w-56 rounded-full bg-indigo-300/20 blur-3xl" />
-
-          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/70 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 px-3 py-1 text-[11px] font-bold text-indigo-800 dark:text-slate-200">
-                <Sparkles className="w-4 h-4" />
-                <span>AI destekli öneri motoru</span>
-                <span className="h-1 w-1 rounded-full bg-indigo-400" />
-                <span>{items.length} kayıt analiz edildi</span>
-              </div>
-
-              <h1 className="mt-3 text-2xl md:text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
-                Ne izlesem kararını kolaylaştıralım.
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-                İzleme geçmişin, sevdiğin türler, platform tercihin, ruh halin
-                ve benzer içerik isteğin birlikte analiz edilir. Öneriler sadece
-                liste olarak değil; neden uygun olduğu, kalite yorumu ve izleme
-                tavsiyesiyle birlikte gelir.
-              </p>
-
+      <div className="mx-auto max-w-7xl min-w-0 space-y-6 pb-4">
+        <header className="relative isolate overflow-hidden rounded-[28px] bg-[#151b25] px-6 py-8 text-white sm:px-10 sm:py-11">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-20 -top-32 h-96 w-96 rounded-full bg-orange-600/20 blur-3xl"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 hidden w-[43%] items-center justify-center gap-4 overflow-hidden opacity-45 lg:flex"
+          >
+            {[...items]
+              .filter((item) => item.posterUrl)
+              .slice(0, 3)
+              .map((item, index) => (
+                <img
+                  key={item.id || index}
+                  src={item.posterUrl!}
+                  alt=""
+                  className={`h-64 w-44 shrink-0 rounded-2xl object-cover shadow-2xl ${index === 1 ? "-rotate-6 -translate-y-6" : "rotate-6 translate-y-10"}`}
+                />
+              ))}
+            {!items.some((item) => item.posterUrl) && (
+              <Film
+                className="h-56 w-56 -rotate-12 text-white/10"
+                strokeWidth={0.7}
+              />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#151b25] via-[#151b25]/10 to-transparent" />
+          </div>
+          <div className="relative max-w-xl">
+            <p className="flex items-center gap-2 text-xs font-semibold tracking-wide text-orange-300">
+              <Clapperboard className="h-4 w-4" /> SANA ÖZEL SEÇKİ
+            </p>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl sm:leading-tight">
+              Bir sonraki favorin
+              <br />
+              <span className="text-orange-300">burada başlıyor.</span>
+            </h1>
+            <p className="mt-4 max-w-md text-sm leading-7 text-slate-300">
+              Bir film gecesi, uzun bir dizi maratonu ya da hiç beklemediğin bir
+              keşif. Bu kez karar vermek keyifli olsun.
+            </p>
+            <a
+              href="#discovery-controls"
+              className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-2xl bg-orange-600 px-5 text-sm font-semibold text-white transition hover:bg-orange-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-300"
+            >
+              Sana uygun olanı bul <ArrowUpRight className="h-4 w-4" />
+            </a>
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-400">
+              <span>
+                <span className="font-semibold text-white">
+                  {history.completed.length}
+                </span>{" "}
+                içerik izlendi
+              </span>
+              <span>
+                <span className="font-semibold text-white">
+                  {history.watching.length}
+                </span>{" "}
+                hikâye devam ediyor
+              </span>
               {topGenresFromHistory.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="text-xs font-bold text-slate-500">
-                    Öne çıkan türlerin:
-                  </span>
-                  {topGenresFromHistory.map((genre) => (
-                    <span
-                      key={genre}
-                      className="rounded-full bg-white/80 dark:bg-slate-900/80 border border-white/80 dark:border-slate-800 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-200"
-                    >
-                      {genre}
-                    </span>
-                  ))}
-                </div>
+                <span>{topGenresFromHistory.slice(0, 2).join(" · ")}</span>
               )}
             </div>
-
-            <div className="grid grid-cols-3 gap-3 min-w-[320px]">
-              <StatChip
-                label="İzlenen"
-                value={history.completed.length}
-                icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
-              />
-
-              <StatChip
-                label="Devam"
-                value={history.watching.length}
-                icon={<Tv className="w-4 h-4 text-purple-500" />}
-              />
-
-              <StatChip
-                label="Yüksek"
-                value={history.highRated.length}
-                icon={<Star className="w-4 h-4 text-amber-500 fill-amber-500" />}
-              />
-            </div>
           </div>
-        </div>
+        </header>
 
-        {error && (
-          <div className="rounded-3xl border border-rose-100/70 dark:border-rose-900/70 bg-rose-50/80 dark:bg-rose-950/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-200 flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 xl:grid-cols-[0.82fr_1.18fr] gap-5">
-          <div className="rounded-[30px] border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/85 p-5 shadow-sm space-y-5">
+        <section
+          id="discovery-controls"
+          aria-labelledby="discovery-heading"
+          className="scroll-mt-24 min-w-0 rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7"
+        >
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
-                Öneri modu
+              <p className="text-xs font-semibold text-orange-600 dark:text-orange-400">
+                İyi bir hikâyeye ne dersin?
               </p>
-
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-2">
-                {modes.map((item) => {
-                  const Icon = item.icon;
-                  const active = mode === item.key;
-
-                  return (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => {
-                        setMode(item.key);
-                        setSuggestions([]);
-                        setSelectedSuggestion(null);
-                        setSelectedDetails(null);
-                      }}
-                      className={`text-left rounded-3xl border p-3 transition ${
-                        active
-                          ? "border-indigo-300 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-900/20 shadow-sm"
-                          : "border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/50 hover:border-indigo-200 dark:hover:border-indigo-900"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`h-10 w-10 rounded-2xl flex items-center justify-center ${
-                            active
-                              ? "bg-indigo-500 text-white"
-                              : "bg-white dark:bg-slate-900 text-slate-500"
-                          }`}
-                        >
-                          <Icon className="w-5 h-5" />
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="text-sm font-black text-slate-900 dark:text-slate-50">
-                            {item.title}
-                          </p>
-                          <p className="mt-1 text-xs leading-5 text-slate-500">
-                            {item.description}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              <h2
+                id="discovery-heading"
+                className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl"
+              >
+                Bugün nasıl bir şey izlemek istersin?
+              </h2>
             </div>
+            <span className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 sm:flex">
+              <Sparkles className="h-5 w-5" />
+            </span>
           </div>
-
-          <div className="rounded-[30px] border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/85 p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
+          <div
+            aria-label="Öneri yaklaşımı"
+            className="-mx-1 mt-5 flex gap-2 overflow-x-auto p-1 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap"
+          >
+            {modes.map((option) => {
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  disabled={loading}
+                  aria-pressed={mode === option.key}
+                  onClick={() => {
+                    setMode(option.key);
+                    setError(null);
+                  }}
+                  className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-2xl border px-4 text-xs font-semibold transition disabled:opacity-50 ${mode === option.key ? "border-orange-600 bg-orange-600 text-white shadow-sm" : "border-slate-200 bg-white text-slate-600 hover:border-orange-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {option.shortTitle}
+                </button>
+              );
+            })}
+          </div>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void runSuggestions();
+            }}
+            className="mt-3"
+          >
+            <div className="mb-4 flex items-start gap-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/50">
+              <SelectedIcon className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
-                  Öneri ayarları
-                </p>
-
-                <h2 className="mt-1 text-xl font-black text-slate-900 dark:text-slate-50 flex items-center gap-2">
-                  <SelectedIcon className="w-5 h-5 text-indigo-500" />
-                  {selectedMode.title}
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
+                <h3 className="text-sm font-semibold">{selectedMode.title}</h3>
+                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
                   {selectedMode.description}
                 </p>
               </div>
-
-              <span className="hidden md:inline-flex rounded-full bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 px-3 py-1 text-xs font-black text-indigo-700 dark:text-indigo-200">
-                {getSuggestionLabel(mode)}
-              </span>
             </div>
-
-            <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-2">
-                  İçerik tipi
-                </p>
-
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { key: "ALL", label: "Hepsi" },
-                    { key: "MOVIE", label: "Film" },
-                    { key: "TV", label: "Dizi" },
-                  ].map((item) => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => setType(item.key as MediaType)}
-                      className={`rounded-full border px-3 py-2 text-xs font-bold transition ${
-                        type === item.key
-                          ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white"
-                          : "bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-500"
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-2">
-                  Platform
-                </p>
-
-                <select
-                  value={provider}
-                  onChange={(e) => setProvider(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400/40"
-                >
-                  <option value="">Platform fark etmez</option>
-                  {providerOptions.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-2">
-                  Hızlı işlem
-                </p>
-
+            {mode === "SIMILAR" && (
+              <label
+                className="mb-4 block text-sm font-medium"
+                htmlFor="similar-title"
+              >
+                Hangi içerik gibi olsun?
+                <input
+                  id="similar-title"
+                  value={similarQuery}
+                  onChange={(event) => setSimilarQuery(event.target.value)}
+                  placeholder="Örneğin: Dark, Interstellar…"
+                  required
+                  maxLength={200}
+                  className="mt-2 block min-h-12 w-full min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/15 dark:border-slate-700 dark:bg-slate-950"
+                />
+              </label>
+            )}
+            <label htmlFor="discovery-mood" className="text-sm font-medium">
+              Aklından geçenleri anlat{" "}
+              <span className="font-normal text-slate-400">· isteğe bağlı</span>
+            </label>
+            <textarea
+              id="discovery-mood"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder={getModePrompt(mode)}
+              maxLength={2000}
+              rows={3}
+              className="mt-2 block w-full min-w-0 resize-y rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/15 dark:border-slate-700 dark:bg-slate-950"
+            />
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[
+                "Sürükleyici bir gizem",
+                "İçimi ısıtan bir hikâye",
+                "Gerçek olaylardan",
+                "Kafa dağıtmalık",
+              ].map((mood) => (
                 <button
                   type="button"
-                  onClick={() => runSuggestions()}
-                  disabled={loading || pageLoading}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm font-bold transition disabled:opacity-60"
+                  key={mood}
+                  disabled={loading}
+                  onClick={() => setDescription(mood)}
+                  className="min-h-9 rounded-full border border-slate-200 px-3 text-xs text-slate-500 transition hover:border-orange-300 hover:text-orange-600 dark:border-slate-700 dark:text-slate-400"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Öneriler hazırlanıyor...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      AI öneri getir
-                    </>
-                  )}
+                  {mood}
                 </button>
-              </div>
+              ))}
             </div>
-
-            {mode === "SIMILAR" && (
-              <div className="mt-4">
-                <p className="text-[11px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-2">
-                  Benzerini bulmak istediğin içerik
-                </p>
-
-                <input
-                  value={similarQuery}
-                  onChange={(e) => setSimilarQuery(e.target.value)}
-                  placeholder="Örn: Inception, Dark, Breaking Bad..."
-                  className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400/40"
-                />
-              </div>
-            )}
-
-            <div className="mt-4">
-              <p className="text-[11px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-2">
-                Açıklama / ruh hali
-              </p>
-
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={getModePrompt(mode)}
-                rows={4}
-                className="w-full rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400/40 resize-none"
-              />
-            </div>
-
-            <div className="mt-4">
-              <p className="text-[11px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-2">
-                Tür / atmosfer
-              </p>
-
-              <div className="flex flex-wrap gap-2">
-                {quickGenres.map((genre) => (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5 dark:border-slate-800">
+              <div
+                aria-label="İçerik türü"
+                className="inline-flex rounded-2xl bg-slate-100 p-1 dark:bg-slate-950"
+              >
+                {(
+                  [
+                    { key: "ALL", label: "Hepsi", icon: Clapperboard },
+                    { key: "MOVIE", label: "Film", icon: Film },
+                    { key: "TV", label: "Dizi", icon: Tv },
+                  ] as const
+                ).map((option) => (
                   <button
-                    key={genre}
+                    key={option.key}
                     type="button"
-                    onClick={() => toggleGenre(genre)}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
-                      genres.includes(genre)
-                        ? "bg-purple-500 text-white border-purple-500"
-                        : "bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-500"
-                    }`}
+                    aria-pressed={type === option.key}
+                    onClick={() => setType(option.key)}
+                    className={`flex min-h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold sm:px-4 ${type === option.key ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white" : "text-slate-500"}`}
                   >
-                    {genre}
+                    <option.icon className="h-3.5 w-3.5" />
+                    {option.label}
                   </button>
                 ))}
               </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  setMode("WEEKEND");
-                  runSuggestions("WEEKEND");
-                }}
-                disabled={loading}
-                className="rounded-3xl border border-amber-100 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-left hover:-translate-y-0.5 transition disabled:opacity-60"
+                aria-expanded={showFilters}
+                aria-controls="discovery-filters"
+                onClick={() => setShowFilters((value) => !value)}
+                className="flex min-h-11 items-center gap-2 rounded-xl px-2 text-xs font-semibold text-slate-600 dark:text-slate-300"
               >
-                <p className="text-sm font-black text-amber-800 dark:text-amber-100">
-                  Hafta sonu 3 film
-                </p>
-                <p className="mt-1 text-xs text-amber-700/80 dark:text-amber-200/80">
-                  Hızlı ve seçilmiş liste oluştur.
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("WATCHING_SIMILAR");
-                  runSuggestions("WATCHING_SIMILAR");
-                }}
-                disabled={loading}
-                className="rounded-3xl border border-emerald-100 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 text-left hover:-translate-y-0.5 transition disabled:opacity-60"
-              >
-                <p className="text-sm font-black text-emerald-800 dark:text-emerald-100">
-                  Devam eden dizilerine benzer
-                </p>
-                <p className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-200/80">
-                  Mevcut dizilerinden yola çıkar.
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("HIGH_RATED_UNWATCHED");
-                  runSuggestions("HIGH_RATED_UNWATCHED");
-                }}
-                disabled={loading}
-                className="rounded-3xl border border-indigo-100 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-3 text-left hover:-translate-y-0.5 transition disabled:opacity-60"
-              >
-                <p className="text-sm font-black text-indigo-800 dark:text-indigo-100">
-                  Puanı yüksek izlemediklerin
-                </p>
-                <p className="mt-1 text-xs text-indigo-700/80 dark:text-indigo-200/80">
-                  Kütüphanende olmayanları getir.
-                </p>
+                <SlidersHorizontal className="h-4 w-4" />
+                Tür ve platform
+                {(genres.length > 0 || provider) && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-50 px-1 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
+                    {genres.length + (provider ? 1 : 0)}
+                  </span>
+                )}
               </button>
             </div>
-          </div>
-        </div>
+            {showFilters && (
+              <div
+                id="discovery-filters"
+                className="mt-3 space-y-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
+              >
+                <label
+                  htmlFor="discovery-platform"
+                  className="block text-xs font-semibold"
+                >
+                  Nerede izleyeceksin?
+                  <select
+                    id="discovery-platform"
+                    value={provider}
+                    onChange={(event) => setProvider(event.target.value)}
+                    className="mt-2 block min-h-12 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                  >
+                    <option value="">Platform fark etmez</option>
+                    {providerOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <fieldset>
+                  <legend className="mb-2 text-xs font-semibold">
+                    Sevdiğin türler
+                  </legend>
+                  <div className="flex flex-wrap gap-2">
+                    {quickGenres.map((genre) => (
+                      <button
+                        key={genre}
+                        type="button"
+                        aria-pressed={genres.includes(genre)}
+                        onClick={() => toggleGenre(genre)}
+                        className={`min-h-10 rounded-xl border px-3 text-xs transition ${genres.includes(genre) ? "border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-700 dark:bg-orange-500/10 dark:text-orange-300" : "border-slate-200 text-slate-500 dark:border-slate-700"}`}
+                      >
+                        {genre}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGenres([]);
+                    setProvider("");
+                  }}
+                  className="flex min-h-10 items-center gap-2 text-xs font-medium text-slate-500"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Filtreleri sıfırla
+                </button>
+              </div>
+            )}
+            {error && (
+              <div
+                role="alert"
+                className="mt-4 flex items-start gap-2 rounded-2xl bg-rose-50 p-4 text-sm leading-6 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
+              >
+                <AlertTriangle className="mt-1 h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="max-w-sm text-xs leading-5 text-slate-400">
+                {items.length
+                  ? "İzlediklerin ve tercihlerin bu seçkiye yön verir."
+                  : "İlk keşfin için ruh hâlini veya sevdiğin türleri seç."}
+              </p>
+              <button
+                type="submit"
+                disabled={loading || pageLoading}
+                className="flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-2xl bg-orange-600 px-6 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                {loading
+                  ? "Seçkin hazırlanıyor…"
+                  : suggestions.length
+                    ? "Yeni bir seçki hazırla"
+                    : "Önerileri keşfet"}
+              </button>
+            </div>
+          </form>
+        </section>
 
-        <div className="rounded-[30px] border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/85 p-5 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-5">
+        <section
+          aria-labelledby="discovery-results"
+          aria-busy={loading}
+          className="min-w-0"
+        >
+          <div className="mb-5 flex items-end justify-between gap-3">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
-                Öneri sonuçları
+              <p className="text-xs font-semibold text-orange-600 dark:text-orange-400">
+                İzlemeye değer hikâyeler
               </p>
-              <h2 className="mt-1 text-lg font-black text-slate-900 dark:text-slate-50">
-                Profesyonel öneri kartları
+              <h2
+                id="discovery-results"
+                className="mt-1 scroll-mt-24 text-2xl font-semibold tracking-tight"
+              >
+                {suggestions.length
+                  ? "Senin için seçtiklerimiz"
+                  : "Biraz ilham al"}
               </h2>
-              <p className="mt-1 text-xs text-slate-500">
-                “Detayları incele” ile Türkçe AI yorum, oyuncu kadrosu, platform,
-                süre, fragman ve kalite notu açılır.
-              </p>
             </div>
-
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 dark:bg-slate-950 px-3 py-1 text-xs font-bold text-slate-500">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              {suggestions.length} öneri
-            </div>
+            {suggestions.length > 0 && (
+              <span className="shrink-0 rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-500 dark:border-slate-700">
+                {suggestions.length} öneri
+              </span>
+            )}
           </div>
-
           {pageLoading ? (
             <PageLoading {...pageLoadingConfig("/media/suggestions")} />
           ) : loading ? (
-            <PageLoading variant="media-suggestions" label="Sana özel öneriler hazırlanıyor…" description="Tercihlerin değerlendirilip film ve dizi bilgileri araştırılıyor." />
+            <PageLoading
+              variant="media-suggestions"
+              label="Sana uygun hikâyeler seçiliyor…"
+              description="İzleme geçmişin ve tercihlerin değerlendiriliyor."
+            />
           ) : suggestions.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 p-10 text-center">
-              <div className="mx-auto h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-200">
-                <Sparkles className="w-6 h-6" />
-              </div>
-
-              <p className="mt-4 text-sm font-bold text-slate-900 dark:text-slate-50">
-                Henüz öneri oluşturulmadı.
-              </p>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Öneri modu seç, açıklama yaz ve AI öneri motorunu çalıştır.
-              </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {(
+                [
+                  {
+                    mode: "WEEKEND",
+                    title: "Hafta sonu sineması",
+                    detail: "Üç film, üç farklı dünyaya yolculuk.",
+                    icon: Film,
+                  },
+                  {
+                    mode: "WATCHING_SIMILAR",
+                    title: "Bir bölüm daha",
+                    detail: "Sevdiğin dizilerin izinden yeni hikâyelere.",
+                    icon: Tv,
+                  },
+                  {
+                    mode: "HIGH_RATED_UNWATCHED",
+                    title: "Gözünden kaçanlar",
+                    detail: "Yüksek puanlı, henüz izlemediğin yapımlar.",
+                    icon: Star,
+                  },
+                ] as const
+              ).map((option, index) => (
+                <button
+                  key={option.mode}
+                  type="button"
+                  onClick={() => {
+                    setMode(option.mode);
+                    void runSuggestions(option.mode);
+                  }}
+                  className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 text-left transition hover:border-orange-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-5 top-3 text-6xl font-semibold text-slate-100 dark:text-slate-800"
+                  >
+                    0{index + 1}
+                  </span>
+                  <option.icon
+                    className="relative h-6 w-6 text-orange-600"
+                    strokeWidth={1.6}
+                  />
+                  <h3 className="relative mt-8 text-base font-semibold">
+                    {option.title}
+                  </h3>
+                  <p className="relative mt-2 max-w-56 text-xs leading-6 text-slate-500 dark:text-slate-400">
+                    {option.detail}
+                  </p>
+                  <span className="mt-5 inline-flex min-h-10 items-center gap-2 text-xs font-semibold text-orange-600">
+                    Seçki oluştur{" "}
+                    <ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                  </span>
+                </button>
+              ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
-              {suggestions.map((item) => {
-                const key = getSuggestionKey(item);
-                const detail = detailsCache[key];
-                const runtimeText = getRuntimeText(detail);
-                const crewText = getCrewText(detail);
-                const platformText = getPlatformsText(detail, item);
-
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {suggestions.map((item, index) => {
+                const key = getSuggestionKey(item),
+                  detail = detailsCache[key];
                 return (
                   <article
                     key={key}
-                    className="group rounded-[28px] border border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/50 overflow-hidden shadow-sm hover:-translate-y-0.5 hover:shadow-md transition"
+                    className="group flex min-w-0 flex-col overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm transition hover:shadow-lg dark:border-slate-800 dark:bg-slate-900"
                   >
-                    <div className="relative h-40 bg-slate-100 dark:bg-slate-900">
-                      {item.backdropUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => void loadDetails(item)}
+                      aria-label={`${item.title}: detayları incele`}
+                      className="relative isolate flex h-72 w-full items-center justify-center overflow-hidden bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 dark:bg-slate-950 sm:h-80"
+                    >
+                      {item.backdropUrl && (
                         <img
                           src={item.backdropUrl}
-                          alt={item.title}
-                          className="w-full h-full object-cover opacity-75 dark:opacity-45"
+                          alt=""
+                          loading="lazy"
+                          className="absolute inset-0 -z-20 h-full w-full scale-110 object-cover opacity-25 blur-lg"
                         />
-                      ) : null}
-
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-slate-950 via-slate-50/55 dark:via-slate-950/60 to-transparent" />
-
-                      <div className="absolute top-3 left-3">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/90 dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 px-2.5 py-1 text-[11px] font-black text-slate-700 dark:text-slate-200">
-                          {item.type === "TV" ? (
-                            <Tv className="w-3.5 h-3.5" />
-                          ) : (
-                            <Film className="w-3.5 h-3.5" />
-                          )}
-                          {typeLabel(item.type)}
-                        </span>
-                      </div>
-
-                      {item.matchScore ? (
-                        <div className="absolute top-3 right-3">
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-black ${getMatchTone(
-                              item.matchScore
-                            )}`}
-                          >
-                            %{item.matchScore} uyum
-                          </span>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="px-4 pb-4 -mt-16 relative">
-                      <div className="flex gap-3">
-                        <PosterBox
-                          url={item.posterUrl}
-                          title={item.title}
-                          className="h-36 w-[96px] flex-shrink-0 border-4 border-slate-50 dark:border-slate-950 shadow-sm"
-                        />
-
-                        <div className="pt-16 min-w-0 flex-1">
-                          <h3 className="text-base font-black text-slate-900 dark:text-slate-50 line-clamp-2">
-                            {item.title}
-                          </h3>
-
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {item.year && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-1 text-[11px] font-bold text-slate-500">
-                                <Calendar className="w-3 h-3" />
-                                {item.year}
-                              </span>
-                            )}
-
-                            {item.tmdbRating ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 px-2 py-1 text-[11px] font-bold text-amber-700 dark:text-amber-200">
-                                <Star className="w-3 h-3 fill-current" />
-                                TMDb {item.tmdbRating}/10
-                              </span>
-                            ) : null}
-
-                            {runtimeText && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-1 text-[11px] font-bold text-slate-500">
-                                <Clock3 className="w-3 h-3" />
-                                {runtimeText}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {item.overview && (
-                        <p className="mt-3 text-sm leading-5 text-slate-600 dark:text-slate-300 line-clamp-3">
-                          {item.overview}
-                        </p>
                       )}
-
-                      <div className="mt-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-3">
-                        <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.14em] text-indigo-600 dark:text-indigo-300">
-                          <Info className="w-3.5 h-3.5" />
-                          Neden önerildi?
-                        </div>
-                        <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
-                          {item.aiReason ||
-                            item.reason ||
-                            "İzleme geçmişin, seçtiğin türler ve izleme isteğin dikkate alınarak önerildi."}
-                        </p>
-                      </div>
-
-                      {item.qualityComment && (
-                        <div className="mt-3 rounded-2xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 px-3 py-3">
-                          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-purple-700 dark:text-purple-200">
-                            Editör yorumu
-                          </p>
-                          <p className="mt-1 text-xs leading-5 text-purple-900/80 dark:text-purple-100/85">
-                            {item.qualityComment}
-                          </p>
-                        </div>
-                      )}
-
-                      {(item.bestFor || item.watchAdvice) && (
-                        <div className="mt-3 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 px-3 py-3">
-                          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-200">
-                            Ne zaman iyi gider?
-                          </p>
-                          <p className="mt-1 text-xs leading-5 text-emerald-900/80 dark:text-emerald-100/85">
-                            {item.bestFor || item.watchAdvice}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {crewText && (
-                          <div className="rounded-2xl bg-slate-100/70 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2">
-                            <p className="text-[10px] uppercase tracking-[0.13em] font-bold text-slate-400">
-                              {item.type === "TV" ? "Yaratıcı" : "Yönetmen"}
-                            </p>
-                            <p className="mt-1 text-xs font-bold text-slate-700 dark:text-slate-200 line-clamp-1">
-                              {crewText}
-                            </p>
-                          </div>
-                        )}
-
-                        {platformText && (
-                          <div className="rounded-2xl bg-slate-100/70 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2">
-                            <p className="text-[10px] uppercase tracking-[0.13em] font-bold text-slate-400">
-                              Platform
-                            </p>
-                            <p className="mt-1 text-xs font-bold text-slate-700 dark:text-slate-200 line-clamp-1">
-                              {platformText}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {(detail?.genres?.length ? detail.genres : item.genres || [])
-                          .slice(0, 5)
-                          .map((genre) => (
-                            <span
-                              key={genre}
-                              className="rounded-full bg-slate-100 dark:bg-slate-900 px-2 py-1 text-[11px] text-slate-500 border border-slate-200/70 dark:border-slate-800"
-                            >
-                              {genre}
+                      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent" />
+                      <PosterBox
+                        url={item.posterUrl}
+                        title={item.title}
+                        className="h-56 w-36 rounded-xl shadow-2xl transition duration-300 motion-safe:group-hover:-translate-y-1 sm:h-64 sm:w-44"
+                      />
+                      <span className="absolute left-4 top-4 rounded-full bg-slate-950/70 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-md">
+                        {item.type === "TV" ? "Dizi" : "Film"}
+                      </span>
+                      {typeof item.tmdbRating === "number" &&
+                        item.tmdbRating > 0 && (
+                          <span className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-slate-900">
+                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            {item.tmdbRating.toFixed(1)}
+                            <span className="text-[9px] text-slate-500">
+                              TMDB
                             </span>
-                          ))}
+                          </span>
+                        )}
+                      <span className="absolute bottom-4 left-4 text-xs font-medium text-white/80">
+                        {String(index + 1).padStart(2, "0")} / SENİN SEÇKİN
+                      </span>
+                      <span className="absolute bottom-3 right-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white backdrop-blur">
+                        <ArrowUpRight className="h-5 w-5" />
+                      </span>
+                    </button>
+                    <div className="flex flex-1 flex-col p-5">
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                        <span>{item.year || "Yıl bilgisi yok"}</span>
+                        {item.genres?.length ? (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span>{item.genres.slice(0, 2).join(" / ")}</span>
+                          </>
+                        ) : null}
                       </div>
-
-                      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="mt-2 text-xl font-semibold tracking-tight">
+                        {item.title}
+                      </h3>
+                      {item.originalTitle &&
+                        item.originalTitle !== item.title && (
+                          <p className="mt-1 text-xs text-slate-400">
+                            {item.originalTitle}
+                          </p>
+                        )}
+                      <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                        {item.overview ||
+                          "Hikâyeyi ve oyuncu kadrosunu detaylardan keşfet."}
+                      </p>
+                      {(item.aiReason || item.reason) && (
+                        <div className="mt-4 rounded-2xl bg-orange-50/80 p-3.5 dark:bg-orange-500/5">
+                          <p className="flex items-center gap-1.5 text-xs font-semibold text-orange-700 dark:text-orange-300">
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Neden sana uygun?
+                          </p>
+                          <p className="mt-2 line-clamp-3 text-xs leading-6 text-slate-600 dark:text-slate-400">
+                            {item.aiReason || item.reason}
+                          </p>
+                        </div>
+                      )}
+                      {getPlatformsText(detail, item) && (
+                        <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-500">
+                          <Tv className="mr-1 inline h-3.5 w-3.5" />
+                          {getPlatformsText(detail, item)}
+                        </p>
+                      )}
+                      <div className="mt-auto flex items-center gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
                         <button
                           type="button"
-                          onClick={() => loadDetails(item)}
                           disabled={detailLoadingKey === key}
-                          className="inline-flex items-center justify-center gap-1.5 rounded-full bg-slate-900 dark:bg-white px-3 py-1.5 text-xs font-bold text-white dark:text-slate-900 hover:brightness-110 transition disabled:opacity-60"
+                          onClick={() => void loadDetails(item)}
+                          className="mt-4 flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 text-xs font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
                         >
                           {detailLoadingKey === key ? (
-                            <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              Detaylar...
-                            </>
+                            <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
-                            <>
-                              <Info className="w-3.5 h-3.5" />
-                              Detayları incele
-                            </>
+                            <PlayCircle className="h-4 w-4" />
                           )}
+                          Detayları keşfet
                         </button>
-
                         <button
                           type="button"
+                          aria-label={`${item.title} benzeri içerikleri bul`}
                           onClick={() => {
                             setMode("SIMILAR");
                             setSimilarQuery(item.title);
-                            setDescription(`${item.title} benzeri öneriler getir.`);
-                            window.scrollTo({ top: 0, behavior: "smooth" });
+                            setDescription(
+                              `${item.title} benzeri öneriler getir.`,
+                            );
+                            document
+                              .getElementById("discovery-controls")
+                              ?.scrollIntoView({ behavior: "smooth" });
                           }}
-                          className="inline-flex items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-900 transition"
+                          className="mt-4 flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-500 hover:border-orange-300 dark:border-slate-700"
                         >
-                          Benzerlerini ara
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled
-                          className="inline-flex items-center justify-center rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white opacity-50"
-                          title="Sonraki adımda aktif edeceğiz"
-                        >
-                          Kütüphaneye ekle
+                          Benzerini bul
                         </button>
                       </div>
                     </div>
@@ -1372,13 +1356,20 @@ export default function MediaSuggestionsPage() {
               })}
             </div>
           )}
-        </div>
+          {suggestions.length > 0 && (
+            <p className="mt-5 text-center text-[11px] leading-5 text-slate-400">
+              Platform bilgileri bölgeye ve zamana göre değişebilir. İzlemeden
+              önce platformdan kontrol edebilirsin.
+            </p>
+          )}
+        </section>
       </div>
 
       {selectedSuggestion && (
         <div className="fixed inset-0 z-[110]">
           <button
             type="button"
+            aria-label="Detayları kapat"
             className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm"
             onClick={() => {
               setSelectedSuggestion(null);
@@ -1387,7 +1378,14 @@ export default function MediaSuggestionsPage() {
           />
 
           <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
-            <div className="w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-[32px] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl pointer-events-auto">
+            <div
+              ref={detailPanel}
+              tabIndex={-1}
+              role="dialog"
+              aria-modal="true"
+              aria-label={selectedSuggestion.title}
+              className="w-full max-w-6xl max-h-[90dvh] overflow-hidden rounded-[32px] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl pointer-events-auto"
+            >
               <div className="relative h-56 overflow-hidden bg-slate-900">
                 {(selectedDetails?.backdropUrl ||
                   selectedSuggestion.backdropUrl) && (
@@ -1410,13 +1408,14 @@ export default function MediaSuggestionsPage() {
                     setSelectedSuggestion(null);
                     setSelectedDetails(null);
                   }}
+                  aria-label="Detayları kapat"
                   className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-center"
                 >
                   <X className="w-5 h-5 text-slate-700 dark:text-slate-200" />
                 </button>
               </div>
 
-              <div className="px-5 pb-5 -mt-28 relative overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="px-5 pb-5 -mt-28 relative overflow-y-auto max-h-[calc(90dvh-120px)]">
                 <div className="grid grid-cols-1 lg:grid-cols-[230px_1fr] gap-5">
                   <div>
                     <PosterBox
@@ -1425,7 +1424,7 @@ export default function MediaSuggestionsPage() {
                         selectedSuggestion.posterUrl
                       }
                       title={selectedSuggestion.title}
-                      className="h-[345px] w-full border-4 border-white dark:border-slate-950 shadow-xl"
+                      className="mx-auto h-[285px] w-[190px] lg:h-[345px] lg:w-full border-4 border-white dark:border-slate-950 shadow-xl"
                     />
 
                     <div className="mt-3 grid grid-cols-2 gap-2">
@@ -1440,20 +1439,29 @@ export default function MediaSuggestionsPage() {
                           Fragman
                         </a>
                       )}
-
-                      <button
-                        type="button"
-                        disabled
-                        className="inline-flex items-center justify-center rounded-2xl bg-indigo-600 text-white px-3 py-2 text-xs font-bold opacity-50"
-                      >
-                        Ekle
-                      </button>
                     </div>
                   </div>
 
-                  <div className="pt-28 lg:pt-32">
+                  <div className="pt-3 lg:pt-32">
+                    {error && (
+                      <p
+                        role="alert"
+                        className="mb-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
+                      >
+                        {error}
+                      </p>
+                    )}
+                    {detailLoadingKey && (
+                      <p
+                        role="status"
+                        className="mb-3 flex items-center gap-2 text-sm text-slate-500"
+                      >
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Detaylar hazırlanıyor…
+                      </p>
+                    )}
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2.5 py-1 text-xs font-black text-slate-700 dark:text-slate-200">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
                         {selectedSuggestion.type === "TV" ? (
                           <Tv className="w-3.5 h-3.5" />
                         ) : (
@@ -1464,8 +1472,8 @@ export default function MediaSuggestionsPage() {
 
                       {selectedSuggestion.matchScore && (
                         <span
-                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-black ${getMatchTone(
-                            selectedSuggestion.matchScore
+                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${getMatchTone(
+                            selectedSuggestion.matchScore,
                           )}`}
                         >
                           %{selectedSuggestion.matchScore} uyum
@@ -1474,7 +1482,7 @@ export default function MediaSuggestionsPage() {
 
                       {(selectedDetails?.tmdbRating ||
                         selectedSuggestion.tmdbRating) && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 px-2.5 py-1 text-xs font-black text-amber-700 dark:text-amber-200">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-200">
                           <Star className="w-3.5 h-3.5 fill-current" />
                           TMDb{" "}
                           {selectedDetails?.tmdbRating ||
@@ -1484,18 +1492,19 @@ export default function MediaSuggestionsPage() {
                       )}
 
                       {selectedDetails?.imdbRating && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-800 px-2.5 py-1 text-xs font-black text-yellow-700 dark:text-yellow-200">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-800 px-2.5 py-1 text-xs font-semibold text-yellow-700 dark:text-yellow-200">
                           IMDb {selectedDetails.imdbRating}/10
                         </span>
                       )}
                     </div>
 
-                    <h2 className="mt-3 text-2xl md:text-3xl font-black text-slate-900 dark:text-slate-50">
+                    <h2 className="mt-3 text-2xl md:text-3xl font-semibold text-slate-900 dark:text-slate-50">
                       {selectedDetails?.title || selectedSuggestion.title}
                     </h2>
 
                     {selectedDetails?.originalTitle &&
-                      selectedDetails.originalTitle !== selectedDetails.title && (
+                      selectedDetails.originalTitle !==
+                        selectedDetails.title && (
                         <p className="mt-1 text-sm text-slate-500">
                           Orijinal ad: {selectedDetails.originalTitle}
                         </p>
@@ -1506,7 +1515,7 @@ export default function MediaSuggestionsPage() {
                         <p className="text-[11px] uppercase tracking-[0.14em] font-bold text-slate-400">
                           Yıl
                         </p>
-                        <p className="mt-1 text-base font-black text-slate-900 dark:text-slate-100">
+                        <p className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">
                           {selectedDetails?.year ||
                             selectedSuggestion.year ||
                             "-"}
@@ -1517,7 +1526,7 @@ export default function MediaSuggestionsPage() {
                         <p className="text-[11px] uppercase tracking-[0.14em] font-bold text-slate-400">
                           Süre / bölüm
                         </p>
-                        <p className="mt-1 text-base font-black text-slate-900 dark:text-slate-100">
+                        <p className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">
                           {getRuntimeText(selectedDetails) || "-"}
                         </p>
                       </div>
@@ -1526,20 +1535,20 @@ export default function MediaSuggestionsPage() {
                         <p className="text-[11px] uppercase tracking-[0.14em] font-bold text-slate-400">
                           Platform
                         </p>
-                        <p className="mt-1 text-base font-black text-slate-900 dark:text-slate-100 line-clamp-1">
+                        <p className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100 line-clamp-1">
                           {getPlatformsText(
                             selectedDetails,
-                            selectedSuggestion
+                            selectedSuggestion,
                           ) || "-"}
                         </p>
                       </div>
                     </div>
 
-                    <div className="mt-4 rounded-3xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 p-4">
-                      <p className="text-[11px] uppercase tracking-[0.14em] font-black text-indigo-700 dark:text-indigo-200">
+                    <div className="mt-4 rounded-3xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-orange-700 dark:text-orange-200">
                         Neden sana uygun?
                       </p>
-                      <p className="mt-2 text-sm leading-6 text-indigo-900/80 dark:text-indigo-100/85">
+                      <p className="mt-2 text-sm leading-6 text-orange-900/80 dark:text-orange-100/85">
                         {selectedSuggestion.aiReason ||
                           selectedSuggestion.reason ||
                           "İzleme geçmişin, tür tercihin ve seçtiğin filtrelere göre önerildi."}
@@ -1547,7 +1556,7 @@ export default function MediaSuggestionsPage() {
                     </div>
 
                     <div className="mt-4">
-                      <p className="text-sm font-black text-slate-900 dark:text-slate-50">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
                         Konu
                       </p>
                       <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
@@ -1558,11 +1567,11 @@ export default function MediaSuggestionsPage() {
                     </div>
 
                     {selectedDetails?.aiEditorComment && (
-                      <div className="mt-4 rounded-3xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 p-4">
-                        <p className="text-[11px] uppercase tracking-[0.14em] font-black text-purple-700 dark:text-purple-200">
+                      <div className="mt-4 rounded-3xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 p-4">
+                        <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-orange-700 dark:text-orange-200">
                           Yapay zeka editör yorumu
                         </p>
-                        <p className="mt-2 text-sm leading-6 text-purple-900/80 dark:text-purple-100/85">
+                        <p className="mt-2 text-sm leading-6 text-orange-900/80 dark:text-orange-100/85">
                           {selectedDetails.aiEditorComment}
                         </p>
                       </div>
@@ -1570,7 +1579,7 @@ export default function MediaSuggestionsPage() {
 
                     {selectedDetails?.aiQualityNote && (
                       <div className="mt-4 rounded-3xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 p-4">
-                        <p className="text-[11px] uppercase tracking-[0.14em] font-black text-amber-700 dark:text-amber-200">
+                        <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-amber-700 dark:text-amber-200">
                           Kalite notu
                         </p>
                         <p className="mt-2 text-sm leading-6 text-amber-900/80 dark:text-amber-100/85">
@@ -1581,7 +1590,7 @@ export default function MediaSuggestionsPage() {
 
                     {selectedDetails?.aiWatchAdvice && (
                       <div className="mt-4 rounded-3xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 p-4">
-                        <p className="text-[11px] uppercase tracking-[0.14em] font-black text-emerald-700 dark:text-emerald-200">
+                        <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-emerald-700 dark:text-emerald-200">
                           İzleme tavsiyesi
                         </p>
                         <p className="mt-2 text-sm leading-6 text-emerald-900/80 dark:text-emerald-100/85">
@@ -1592,7 +1601,7 @@ export default function MediaSuggestionsPage() {
 
                     <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="rounded-3xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4">
-                        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] font-black text-slate-400">
+                        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] font-semibold text-slate-400">
                           <Users className="w-3.5 h-3.5" />
                           {selectedSuggestion.type === "TV"
                             ? "Yaratıcı"
@@ -1604,7 +1613,7 @@ export default function MediaSuggestionsPage() {
                       </div>
 
                       <div className="rounded-3xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4">
-                        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] font-black text-slate-400">
+                        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] font-semibold text-slate-400">
                           <Clapperboard className="w-3.5 h-3.5" />
                           Durum
                         </div>
@@ -1616,7 +1625,7 @@ export default function MediaSuggestionsPage() {
 
                     <div className="mt-4">
                       <div className="flex items-center justify-between gap-3 mb-3">
-                        <p className="text-sm font-black text-slate-900 dark:text-slate-50">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
                           Oyuncu kadrosu
                         </p>
 
@@ -1659,7 +1668,11 @@ export default function MediaSuggestionsPage() {
 
                     {detailLoadingKey ===
                       getSuggestionKey(selectedSuggestion) && (
-                      <PageLoading compact variant="media-detail" label="İçerik bilgileri tamamlanıyor…" />
+                      <PageLoading
+                        compact
+                        variant="media-detail"
+                        label="İçerik bilgileri tamamlanıyor…"
+                      />
                     )}
                   </div>
                 </div>
