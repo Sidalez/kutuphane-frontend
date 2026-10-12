@@ -239,7 +239,11 @@ const providerOptions = [
   "Disney+",
   "Apple TV+",
   "MUBI",
-  "BluTV",
+  "HBO Max",
+  "TV+",
+  "tabii",
+  "Exxen",
+  "puhutv",
   "Gain",
 ];
 
