@@ -1,3 +1,5 @@
+import ReadingSessionPanel from '../components/ReadingSessionPanel';
+import {useAppDialog} from '../components/feedback/DialogProvider';
 import {localDate} from "../utils/personalHub";
 import {elapsedReadingMs,restoreReadingTimer,pauseReadingTimer,resumeReadingTimer,finishReadingTimer,type ReadingTimer} from '../utils/readingTimer';
 import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
@@ -831,6 +833,7 @@ export default function BookDetailPage() {
         {/* TAB İÇERİKLERİ */}
         {activeTab === "logs" ? (
           <LogsTab
+            bookTitle={book.title}
             bookStatus={book.status}
             logs={logs}
             logDate={logDate}
@@ -952,6 +955,7 @@ export default function BookDetailPage() {
 /* ========================== LOGS TAB =============================== */
 
 interface LogsTabProps {
+  bookTitle: string;
   bookStatus: Book["status"];
   logs: any[];
   logDate: string;
@@ -973,6 +977,7 @@ interface LogsTabProps {
 }
 
 function LogsTab({
+  bookTitle,
   bookStatus,
   logs,
   logDate,
@@ -992,7 +997,8 @@ function LogsTab({
   bookId,
   userId,
 }: LogsTabProps) {
-  const [mode, setMode] = useState<"manual" | "auto">("manual");
+  const dialog=useAppDialog();
+  const [mode, setMode] = useState<"manual" | "auto">("auto");
   const [timerStartMs, setTimerStartMs] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -1119,6 +1125,7 @@ function LogsTab({
   const handleResetAutoSession = async () => {
     if(timerBusy)return;
     if(!navigator.onLine){setTimerError('Oturumu sıfırlamak için internet bağlantısı gerekiyor.');return;}
+    if(!await dialog.confirm({title:'Okuma oturumu sıfırlansın mı?',message:'Bu oturumun süresi ve henüz kaydetmediğin sayfa bilgileri silinecek. Önceki okuma kayıtların korunur.',confirmLabel:'Oturumu sıfırla',tone:'warning'}))return;
     setTimerBusy(true);setTimerError('');
     // Firestore'daki session'ı tamamen sil
     if (sessionDocRef) {
@@ -1139,20 +1146,6 @@ function LogsTab({
     setLogEndPage("");
     setAutoStartPage(null);
     setTimer(null);setTimerBusy(false);
-  };
-
-  const formatElapsed = (ms: number) => {
-    const totalSec = Math.floor(ms / 1000);
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
-
-    if (h > 0) {
-      return `${h} sa ${m.toString().padStart(2, "0")} dk`;
-    }
-    return `${m.toString().padStart(2, "0")} dk ${s
-      .toString()
-      .padStart(2, "0")} sn`;
   };
 
   const persistTimer = async (next:ReadingTimer,extra:Record<string,unknown>={}) => {
@@ -1196,9 +1189,9 @@ function LogsTab({
     <div className="space-y-4">
       {/* Form kartı */}
       <div className="rounded-3xl border border-amber-100 bg-white shadow-[0_12px_35px_rgba(0,0,0,0.06)] dark:bg-slate-950 dark:border-slate-800 p-5 md:p-6">
-        <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <h2 className="text-base md:text-lg font-semibold text-amber-700">
-            Yeni Okuma Kaydı Ekle
+            Okuma oturumun
           </h2>
 
           {/* 🔸 Kayıt modu seçimi */}
@@ -1209,7 +1202,7 @@ function LogsTab({
             <button
               type="button"
               disabled={!!timer || timerBusy} onClick={() => setMode("manual")}
-              className={`px-2.5 py-1 rounded-full font-medium ${
+              className={`min-h-11 px-3 py-2 rounded-full font-medium disabled:opacity-40 ${
                 mode === "manual"
                   ? "bg-white dark:bg-slate-800 text-amber-700 shadow"
                   : "text-slate-600 dark:text-slate-300 hover:bg-white/40 dark:hover:bg-slate-800/80"
@@ -1220,7 +1213,7 @@ function LogsTab({
             <button
               type="button"
               onClick={() => setMode("auto")}
-              className={`px-2.5 py-1 rounded-full font-medium ${
+              className={`min-h-11 px-3 py-2 rounded-full font-medium disabled:opacity-40 ${
                 mode === "auto"
                   ? "bg-white dark:bg-slate-800 text-amber-700 shadow"
                   : "text-slate-600 dark:text-slate-300 hover:bg-white/40 dark:hover:bg-slate-800/80"
@@ -1257,23 +1250,25 @@ function LogsTab({
 
         {bookStatus === "OKUNUYOR" && (
           <>
+            {mode==='auto'&&<ReadingSessionPanel title={bookTitle} timer={timer} elapsedMs={elapsedMs} busy={timerBusy} loaded={sessionLoaded} startPage={autoStartPage??Number(logStartPage||lastReadPage||0)} pages={Number(calculatedReadPages)||0} onStart={handleStartAutoSession} onPause={handlePauseAutoSession} onFinish={handleStopAutoSession} onReset={handleResetAutoSession}/>}
             {/* Tarih & saat satırı */}
             <div className="mt-1 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-slate-600">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
                     Tarih
                   </label>
                   <input
                     type="date"
                     value={logDate}
+                    disabled={mode === "auto" && !!timer}
                     onChange={(e) => setLogDate(e.target.value)}
-                    className="px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40"
+                    className="min-h-12 min-w-0 w-full px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-slate-600">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
                     Başlangıç Saati{" "}
                     {mode === "auto" && (
                       <span className="ml-1 text-[10px] text-slate-400">
@@ -1286,12 +1281,12 @@ function LogsTab({
                     value={logStartTime}
                     onChange={(e) => setLogStartTime(e.target.value)}
                     disabled={mode === "auto"} // 🔥 Auto modda kullanıcı seçemiyor
-                    className="px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 disabled:bg-slate-100 disabled:text-slate-400 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40 disabled:dark:bg-slate-800 disabled:dark:text-slate-500"
+                    className="min-h-12 min-w-0 w-full px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 disabled:bg-slate-100 disabled:text-slate-400 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40 disabled:dark:bg-slate-800 disabled:dark:text-slate-500"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-slate-600">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
                     Bitiş Saati{" "}
                     {mode === "auto" && (
                       <span className="ml-1 text-[10px] text-slate-400">
@@ -1304,102 +1299,32 @@ function LogsTab({
                     value={logEndTime}
                     onChange={(e) => setLogEndTime(e.target.value)}
                     disabled={mode === "auto"}
-                    className="px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 disabled:bg-slate-100 disabled:text-slate-400 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40 disabled:dark:bg-slate-800 disabled:dark:text-slate-500"
+                    className="min-h-12 min-w-0 w-full px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 disabled:bg-slate-100 disabled:text-slate-400 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40 disabled:dark:bg-slate-800 disabled:dark:text-slate-500"
                   />
                 </div>
 
-                {/* Kronometre alanı (sadece otomatik modda) */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-slate-600">
-                    Kronometre
-                  </label>
-                  {mode === "auto" ? (
-                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-amber-200 bg-amber-50/60 text-xs text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200">
-                      <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center dark:bg-slate-800">
-                        <Clock className="w-4 h-4 text-amber-600 dark:text-amber-300" />
-                      </div>
-                      <div className="flex-1">
-                        {isRunning ? (
-                          <>
-                            <div className="text-[11px] text-slate-500">
-                              Süre işliyor...
-                            </div>
-                            <div className="text-sm font-semibold">
-                              {formatElapsed(elapsedMs)}
-                            </div>
-                          </>
-                        ) : timer ? (
-                          <>
-                            <div className="text-[11px] text-slate-500">
-                              {timer.status==='paused'?'Duraklatıldı':'Oturum süresi'}
-                            </div>
-                            <div className="text-sm font-semibold">
-                              {formatElapsed(elapsedMs)}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-[11px] text-slate-500">
-                            Başlat’a bastığında süre otomatik ölçülür. Molada duraklatabilir, bitince kaydedebilirsin.
-                          </div>
-                        )}
-                      </div>
-                                       {isRunning ? (
-                        <button
-                          type="button"
-                          disabled={timerBusy} onClick={handlePauseAutoSession}
-                          className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-[11px] font-semibold shadow hover:bg-red-600"
-                        >
-                          Duraklat
-                        </button>
-                      ) : (
-                        <div className="flex gap-1">
-                          <button
-                            type="button"
-                            disabled={timerBusy || !sessionLoaded || timer?.status === "finished"} onClick={handleStartAutoSession}
-                            className="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-[11px] font-semibold shadow hover:bg-amber-600"
-                          >
-                            {timer?.status === "paused" ? "Devam et" : "Başlat"}
-                          </button>
 
-                          {(timerStartMs || elapsedMs > 0) && (
-                            <button
-                              type="button"
-                              disabled={timerBusy} onClick={handleResetAutoSession}
-                              className="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-[11px] font-semibold shadow hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
-                            >
-                              Sıfırla
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                    </div>
-                  ) : (
-                    <div className="px-3 py-2.5 rounded-xl border border-slate-200 text-[11px] text-slate-500 bg-slate-50 dark:bg-slate-900 dark:border-slate-700">
-                      Otomatik süre takibi için yukarıdan{" "}
-                      <strong>Otomatik</strong> modunu seç.
-                    </div>
-                  )}
-                </div>
               </div>
 
-              {timer && timer.status !== "finished" && <button type="button" disabled={timerBusy} onClick={handleStopAutoSession} className="mb-4 min-h-11 rounded-xl bg-orange-600 px-4 text-sm font-semibold text-white disabled:opacity-50">Okumayı bitir</button>}{timer?.status === "paused" && <p role="status" className="mb-3 text-sm text-amber-700">Sayaç duraklatıldı. Mola süresi okuma süresine eklenmez.</p>}{timer?.status === "finished" && <p role="status" className="mb-3 text-sm text-emerald-700">Okuma bitti. Bitiş sayfasını girip kaydını tamamla.</p>}{timerError && <p role="alert" className="mb-3 text-sm text-red-600">{timerError}</p>}{/* Sayfa satırları */}
+              {timerError && <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{timerError}</p>}
+              {/* Sayfa satırları */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-slate-600">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
                     Başlangıç Sayfası
                   </label>
                   <input
                     type="number"
                     placeholder="Örn: 1"
                     value={logStartPage}
+                    disabled={mode === "auto" && !!timer}
                     onChange={(e) => setLogStartPage(e.target.value)}
-                    className="px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40"
+                    className="min-h-12 min-w-0 w-full px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-slate-600">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
                     Bitiş Sayfası
                   </label>
                   <input
@@ -1408,18 +1333,18 @@ function LogsTab({
                     value={logEndPage}
                     min={logStartPage || "1"}
                     onChange={(e) => setLogEndPage(e.target.value)}
-                    className="px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40"
+                    className="min-h-12 min-w-0 w-full px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1 md:col-span-2">
-                  <label className="text-xs font-medium text-slate-600">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
                     Okunan Sayfa{" "}
                     <span className="ml-1 text-[10px] text-slate-400">
                       (otomatik)
                     </span>
                   </label>
-                  <div className="px-3 py-2.5 rounded-xl border border-amber-100 bg-amber-50/60 text-sm shadow-sm flex items-center gap-3 text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200">
+                  <div className="min-h-12 min-w-0 w-full px-3 py-2.5 rounded-xl border border-amber-100 bg-amber-50/60 text-sm shadow-sm flex items-center gap-3 text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200">
                     <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center dark:bg-slate-800">
                       <BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-300" />
                     </div>
@@ -1447,7 +1372,7 @@ function LogsTab({
                 <button
                   type="button"
                   onClick={saveLog} disabled={timerBusy || (mode === "auto" && timer?.status !== "finished")}
-                  className="w-full md:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white font-semibold text-sm shadow-md transition"
+                  className="min-h-12 w-full rounded-2xl bg-orange-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   + Kayıt Ekle
                 </button>
@@ -1628,7 +1553,7 @@ function NotesTab({
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             {isReading && (
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-slate-600">
+                <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
                   Sayfa no (opsiyonel)
                 </label>
                 <input
@@ -1636,7 +1561,7 @@ function NotesTab({
                   placeholder="Örn: 120"
                   value={newNotePage}
                   onChange={(e) => setNewNotePage(e.target.value)}
-                  className="px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40"
+                  className="min-h-12 min-w-0 w-full px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40"
                 />
               </div>
             )}
@@ -1648,14 +1573,14 @@ function NotesTab({
                   : "md:col-span-4 flex flex-col gap-1"
               }
             >
-              <label className="text-xs font-medium text-slate-600">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
                 {textareaLabel}
               </label>
               <textarea
                 placeholder={textareaPlaceholder}
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
-                className="px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm min-h-[90px] focus:outline-none focus:ring-2 focus:ring-amber-400/40 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40"
+                className="min-h-12 min-w-0 w-full px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm shadow-sm min-h-[90px] focus:outline-none focus:ring-2 focus:ring-amber-400/40 dark:bg-slate-900 dark:border-slate-700 dark:focus:ring-slate-500/40"
               />
             </div>
           </div>
