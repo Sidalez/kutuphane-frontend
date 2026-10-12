@@ -684,7 +684,7 @@ function ActorCard({
         </button>
 
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-1 text-xs font-black text-slate-900 dark:text-slate-100" dir="auto">
+          <p className="line-clamp-1 text-xs font-semibold text-slate-900 dark:text-slate-100" dir="auto">
             {person.name}
           </p>
 
@@ -745,7 +745,7 @@ function RatingMetric({ label, value }: { label: string; value?: number }) {
             <RatingStars value={value} size="h-3.5 w-3.5" />
           </div>
         </div>
-        <span className="flex-shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-black text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
+        <span className="flex-shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
           {value ? `${value}/5` : "-"}
         </span>
       </div>
@@ -809,7 +809,7 @@ function StarRating({
           })}
         </div>
 
-        <span className="flex-shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-black text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
+        <span className="flex-shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
           {value ? `${value}/5` : "-"}
         </span>
       </div>
@@ -1953,7 +1953,7 @@ export default function MediaDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       <ToastBar toast={toast} onClose={() => setToast(null)} />
 
       {previewImage ? (
@@ -1983,7 +1983,7 @@ export default function MediaDetailPage() {
             </div>
 
             <div className="border-t border-white/10 bg-slate-950/95 px-5 py-4">
-              <p className="text-sm font-black text-white">{previewImage.title}</p>
+              <p className="text-sm font-semibold text-white">{previewImage.title}</p>
               {previewImage.subtitle ? (
                 <p className="mt-1 text-xs text-slate-400">{previewImage.subtitle}</p>
               ) : null}
@@ -1992,211 +1992,25 @@ export default function MediaDetailPage() {
         </div>
       ) : null}
 
-      <section className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-50 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-        {item.backdropUrl ? (
-          <img
-            src={item.backdropUrl}
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 h-full w-full object-cover opacity-20 dark:opacity-25"
-          />
-        ) : null}
-
-        <div className="absolute inset-0 bg-gradient-to-br from-white/90 via-slate-50/85 to-slate-100/90 dark:from-slate-950/95 dark:via-slate-950/90 dark:to-slate-900/95" />
-
-        <div className="relative z-10 px-4 py-5 sm:px-5 md:px-6">
-          <Link
-            to="/media"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Film & dizilerime dön
-          </Link>
-
-          <div className="mt-5 grid grid-cols-1 gap-6 md:grid-cols-[170px_minmax(0,1fr)] lg:grid-cols-[190px_minmax(0,1fr)] md:items-start">
-            <div className="flex min-w-0 flex-col items-center gap-3 md:items-start">
-              <div className="relative flex h-60 w-40 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white/90 bg-slate-200 shadow-md dark:border-slate-900 dark:bg-slate-800 sm:h-64 sm:w-44 md:h-[255px] md:w-[170px] lg:h-[285px] lg:w-[190px]">
-                {item.posterUrl ? (
-                  <img
-                    src={item.posterUrl}
-                    alt={item.title}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-slate-400">
-                    {item.type === "TV" ? <Tv className="h-8 w-8" /> : <Film className="h-8 w-8" />}
-                    <span className="text-xs font-medium">Poster yok</span>
-                  </div>
-                )}
-              </div>
-
-              {item.trailerUrl ? (
-                <a
-                  href={item.trailerUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex w-40 items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-110 dark:bg-slate-100 dark:text-slate-900 sm:w-44 md:w-[170px] lg:w-[190px]"
-                >
-                  <Play className="h-3.5 w-3.5" />
-                  Fragman
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              ) : null}
-            </div>
-
-            <div className="min-w-0 space-y-4 overflow-hidden">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800">
-                  {item.type === "TV" ? <Tv className="h-3.5 w-3.5" /> : <Film className="h-3.5 w-3.5" />}
-                  {mediaTypeLabel(item.type)}
-                </span>
-
-                <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-semibold shadow-sm ${getStatusBadgeClass(status)}`}>
-                  {statusLabel(status)}
-                </span>
-
-                {item.year ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800">
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    {item.year}
-                  </span>
-                ) : null}
-
-                {item.tmdbRating ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 shadow-sm ring-1 ring-amber-100 dark:bg-amber-900/20 dark:text-amber-200 dark:ring-amber-900/50">
-                    <Star className="h-3.5 w-3.5 fill-current" />
-                    TMDb {item.tmdbRating}/10
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="max-w-4xl min-w-0">
-                <h1 className="break-words text-2xl font-semibold leading-tight tracking-tight text-slate-900 dark:text-slate-50 md:text-3xl lg:text-4xl">
-                  {item.title}
-                </h1>
-
-                {item.originalTitle && item.originalTitle !== item.title ? (
-                  <p className="mt-1 break-words text-sm text-slate-500 dark:text-slate-400">
-                    {item.originalTitle}
-                  </p>
-                ) : null}
-              </div>
-
-              {item.overview ? (
-                <p className="max-w-4xl break-words text-sm leading-6 text-slate-600 dark:text-slate-400">
-                  {item.overview}
-                </p>
-              ) : null}
-
-              <div className="flex max-w-4xl flex-wrap gap-2">
-                {(item.genres || []).map((genre) => (
-                  <span
-                    key={genre}
-                    className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800"
-                  >
-                    {genre}
-                  </span>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">İlerleme</p>
-                  <p className="mt-1 font-bold text-slate-900 dark:text-slate-50">{progress.percent}%</p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    {item.type === "TV" ? "Bölüm" : "Süre"}
-                  </p>
-                  <p className="mt-1 font-bold text-slate-900 dark:text-slate-50">
-                    {item.type === "TV"
-                      ? `${watchedEpisodeList.length}/${item.numberOfEpisodes || 0}`
-                      : item.runtime
-                      ? `${item.runtime} dk`
-                      : "Bilinmiyor"}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Genel puan</p>
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <RatingStars value={overallRating} size="h-3.5 w-3.5" />
-                    <span className="text-sm font-black text-slate-900 dark:text-slate-50">
-                      {overallRating ? `${overallRating}/5` : "-"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Tarih</p>
-                  <p className="mt-1 font-bold text-slate-900 dark:text-slate-50">{dateFieldsEnabled ? formatDate(watchDate) : "-"}</p>
-                </div>
-              </div>
-
-              <div className="max-w-4xl rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="rounded-full bg-slate-200/70 p-1 dark:bg-slate-800">
-                  <div
-                    className="h-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all"
-                    style={{ width: `${Math.min(100, Math.max(0, progress.percent))}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{progress.label}{progress.sub ? ` • ${progress.sub}` : ""}</p>
-              </div>
-
-              <div className="grid max-w-4xl grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Ekleme tarihi</p>
-                  <p className="mt-1 text-xs font-bold text-slate-700 dark:text-slate-200">{createdDateText}</p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Son görüntüleme</p>
-                  <p className="mt-1 text-xs font-bold text-slate-700 dark:text-slate-200">{lastViewedDateText}</p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Son kayıt güncellemesi</p>
-                  <p className="mt-1 text-xs font-bold text-slate-700 dark:text-slate-200">{updatedDateText}</p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Son işlem tarihi</p>
-                  <p className="mt-1 text-xs font-bold text-slate-700 dark:text-slate-200">{lastActionDateText}</p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Son izleme tarihi</p>
-                  <p className="mt-1 text-xs font-bold text-slate-700 dark:text-slate-200">{lastWatchedEpisodeDateText}</p>
-                </div>
-              </div>
-
-              <div className="grid max-w-4xl grid-cols-1 gap-3 xl:grid-cols-[1fr_1.1fr]">
-                <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 shadow-sm dark:border-indigo-900/60 dark:bg-indigo-950/30">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-700 dark:text-indigo-200">En son izlenen içerik</p>
-                  <p className="mt-1 text-sm font-black text-indigo-950 dark:text-indigo-100">{lastWatchedEpisodeText}</p>
-                  <p className="mt-1 text-[11px] font-semibold text-indigo-700/80 dark:text-indigo-200/80">{lastWatchedEpisodeDateText}</p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Son işlem açıklaması</p>
-                  <p className="mt-1 text-sm font-black text-slate-900 dark:text-slate-50">{formatStoredActionText(lastActionText, (item as any)?.lastActionAt)}</p>
-                  {lastActionDetails.length > 0 ? (
-                    <ul className="mt-2 space-y-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                      {lastActionDetails.slice(0, 3).map((detail, index) => (
-                        <li key={`${detail}-${index}`} className="flex gap-1.5">
-                          <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-indigo-400" />
-                          <span>{formatStoredActionText(detail, (item as any)?.lastActionAt)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              </div>
+      <section className="relative isolate overflow-hidden rounded-[2rem] bg-[#111e2c] text-white shadow-xl shadow-slate-900/10">
+        {item.backdropUrl&&<img src={item.backdropUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-35"/>}
+        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#111e2c] via-[#111e2c]/85 to-[#111e2c]/35"/>
+        <div className="relative p-5 sm:p-8 lg:p-10">
+          <Link to="/media" className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-white/70 transition hover:text-white"><ArrowLeft size={16}/>Film ve dizilerim</Link>
+          <div className="mt-5 grid min-w-0 gap-7 sm:grid-cols-[150px_minmax(0,1fr)] lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-10">
+            <div className="flex items-start gap-4 sm:block"><div className="h-48 w-32 shrink-0 overflow-hidden rounded-2xl bg-white/10 shadow-2xl ring-1 ring-white/15 sm:h-[225px] sm:w-[150px] lg:h-[315px] lg:w-[210px]">{item.posterUrl?<img src={item.posterUrl} alt={`${item.title} afişi`} className="h-full w-full object-cover"/>:<span className="flex h-full items-center justify-center text-white/40"><Film size={40}/></span>}</div><div className="flex min-w-0 flex-col gap-3 sm:mt-4"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-orange-300 sm:hidden">SENİN İZLEME RAFIN</p>{item.trailerUrl&&<a href={item.trailerUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-4 text-xs font-semibold text-white transition hover:bg-white/20"><Play size={15}/>Fragmanı izle<ExternalLink size={13}/></a>}<p className="text-xs leading-6 text-white/50 sm:hidden">{mediaTypeLabel(item.type)}{item.year?` · ${item.year}`:''}<br/>{item.tmdbRating?`TMDb ${item.tmdbRating}/10`:''}</p></div></div>
+            <div className="min-w-0"><p className="hidden text-[10px] font-bold uppercase tracking-[.22em] text-orange-300 sm:block">SENİN İZLEME RAFIN</p><div className="mb-4 mt-3 flex flex-wrap items-center gap-2"><span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-medium">{mediaTypeLabel(item.type)}{item.year?` · ${item.year}`:''}</span><span className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold ${getStatusBadgeClass(status)}`}>{statusLabel(status)}</span>{item.tmdbRating&&<span className="inline-flex items-center gap-1 rounded-full bg-amber-300/15 px-3 py-1.5 text-[11px] font-semibold text-amber-200"><Star size={13} fill="currentColor"/>{item.tmdbRating}/10 <span className="font-normal text-white/50">TMDb</span></span>}</div>
+              <h1 className="break-words text-3xl font-bold leading-[1.12] tracking-tight sm:text-4xl lg:text-5xl">{item.title}</h1>{item.originalTitle&&item.originalTitle!==item.title&&<p className="mt-3 break-words text-sm text-white/45">{item.originalTitle}</p>}
+              <div className="mt-4 flex flex-wrap gap-2">{(item.genres||[]).map(genre=><span key={genre} className="rounded-lg bg-white/5 px-2.5 py-1 text-[10px] text-white/65">{genre}</span>)}</div>
+              {item.overview&&<details className="mt-5 max-w-3xl"><summary className="min-h-11 cursor-pointer text-sm font-semibold text-white/85">Hikâye hakkında</summary><p className="mt-1 break-words text-sm leading-7 text-white/65">{item.overview}</p></details>}
+              <div className="mt-5 rounded-2xl border border-white/10 bg-white/[.06] p-4 sm:p-5"><div className="flex items-center justify-between gap-4"><p className="text-xs font-medium text-white/65">İzleme yolculuğun</p><span className="text-xl font-semibold tabular-nums text-orange-300">%{Math.round(progress.percent)}</span></div><div role="progressbar" aria-label="İzleme ilerlemesi" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100,Math.max(0,progress.percent))} className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-orange-300 transition-all motion-reduce:transition-none" style={{width:`${Math.min(100,Math.max(0,progress.percent))}%`}}/></div><p className="mt-3 text-xs leading-5 text-white/55">{progress.label}{progress.sub?` · ${progress.sub}`:''}</p></div>
             </div>
           </div>
+          <div className="mt-7 grid grid-cols-2 gap-3 border-t border-white/10 pt-6 lg:grid-cols-4">{[{label:item.type==='TV'?'İzlenen bölüm':'Film süresi',value:item.type==='TV'?`${watchedEpisodeList.length} / ${item.numberOfEpisodes||'—'}`:item.runtime?`${item.runtime} dk`:'Bilinmiyor'},{label:'Senin puanın',value:overallRating?`${overallRating} / 5`:'Henüz puanlanmadı'},{label:'Son izleme',value:lastWatchedEpisodeDateText},{label:item.type==='TV'?'Yaratıcı':'Yönetmen',value:item.type==='TV'?item.creators?.join(', ')||'Bilinmiyor':item.director||'Bilinmiyor'}].map(stat=><div key={stat.label} className="min-w-0 rounded-2xl bg-white/5 p-4"><p className="text-[10px] font-medium text-white/40">{stat.label}</p><p className="mt-2 break-words text-sm font-semibold leading-6 text-white/85">{stat.value}</p></div>)}</div>
+          <details className="mt-5 text-xs text-white/50"><summary className="min-h-11 cursor-pointer py-3">Kayıt ayrıntıları ve son etkinlik</summary><div className="grid gap-4 py-3 sm:grid-cols-2 lg:grid-cols-3">{[['Eklenme',createdDateText],['Son görüntüleme',lastViewedDateText],['Güncelleme',updatedDateText],['Son işlem',lastActionDateText],['Son izlenen',lastWatchedEpisodeText],['İşlem açıklaması',formatStoredActionText(lastActionText,(item as any)?.lastActionAt)]].map(([label,value])=><div key={label}><p className="text-white/35">{label}</p><p className="mt-1 break-words leading-6 text-white/70">{value}</p></div>)}</div></details>
         </div>
       </section>
+      <nav aria-label="İçerik detay bölümleri" className="flex gap-2 overflow-x-auto pb-1">{[{id:'watch-settings',label:'İzleme ve puanlama'},...(item.type==='TV'?[{id:'episodes',label:'Sezonlar ve bölümler'}]:[]),{id:'media-info',label:'Oyuncular ve bilgiler'}].map(section=><a key={section.id} href={`#${section.id}`} className="inline-flex min-h-12 shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 transition hover:border-orange-300 hover:text-orange-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">{section.label}<ChevronRight size={14}/></a>)}</nav>
 
       {error ? (
         <div className="flex items-start gap-2 rounded-2xl border border-rose-100/70 bg-rose-50/80 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-200">
@@ -2206,12 +2020,12 @@ export default function MediaDetailPage() {
       ) : null}
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
-        <form
+        <form id="watch-settings"
           onSubmit={(event) => {
             event.preventDefault();
             void handleSave();
           }}
-          className="min-w-0 space-y-5 rounded-[2rem] border border-slate-200 bg-white px-4 py-5 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:px-5 xl:sticky xl:top-5 xl:col-span-1 xl:self-start"
+          className="min-w-0 space-y-5 rounded-[2rem] border border-slate-200 bg-white px-4 py-5 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:px-5 scroll-mt-28 xl:col-span-1 xl:self-start"
         >
           <div>
             <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-50">
@@ -2251,7 +2065,7 @@ export default function MediaDetailPage() {
                     type="button"
                     disabled={disabled}
                     onClick={() => void handleStatusSelect(statusOption)}
-                    className={`rounded-2xl border px-3 py-3 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-45 ${
+                    className={`rounded-2xl border px-3 py-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 ${
                       status === statusOption
                         ? "border-primary bg-primary text-white shadow-sm"
                         : "border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
@@ -2267,7 +2081,7 @@ export default function MediaDetailPage() {
               <button
                 type="button"
                 onClick={resetStatusFlow}
-                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-200"
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-200"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 Durumu sıfırla
@@ -2349,7 +2163,7 @@ export default function MediaDetailPage() {
                 </div>
                 <div className="text-right">
                   <RatingStars value={overallRating} />
-                  <p className="mt-1 text-xs font-black text-indigo-900 dark:text-indigo-100">
+                  <p className="mt-1 text-xs font-semibold text-indigo-900 dark:text-indigo-100">
                     {overallRating ? `${overallRating}/5` : "Henüz yok"}
                   </p>
                 </div>
@@ -2360,7 +2174,7 @@ export default function MediaDetailPage() {
           <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
-                <h3 className="flex items-center gap-2 text-sm font-black text-slate-900 dark:text-slate-50">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-50">
                   <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
                     <Layers className="h-4 w-4" />
                   </span>
@@ -2392,7 +2206,7 @@ export default function MediaDetailPage() {
                     <button
                       type="button"
                       onClick={() => toggleShelf(shelf.id)}
-                      className="flex min-w-0 flex-1 items-center gap-2 text-left text-xs font-black"
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left text-xs font-semibold"
                     >
                       <Heart className={`h-4 w-4 shrink-0 ${active ? "fill-current" : ""}`} />
                       <span className="truncate">{shelf.name}</span>
@@ -2430,7 +2244,7 @@ export default function MediaDetailPage() {
                 type="button"
                 onClick={createShelf}
                 disabled={savingShelf}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
               >
                 {savingShelf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 Raf ekle
@@ -2470,17 +2284,17 @@ export default function MediaDetailPage() {
 
         <div className="space-y-5 xl:col-span-1">
           {item.type === "TV" ? (
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-5">
+            <section id="episodes" className="scroll-mt-28 scroll-mt-28 rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-50">
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-300">
                       <Tv className="h-4 w-4" />
                     </span>
-                    İzlenen bölümleri ekle / güncelle
+                    Sezonlar ve bölümler
                   </h2>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    Sezon seç, izlediğin bölümlere tik at. Eklenen bölümler raporlara işlenir; kaldırılan bölümlerin eski rapor kayıtları da temizlenir.
+                    Hikâyeni kaldığın yerden takip et. İzlediklerini işaretleyip ilerlemeni güncel tut.
                   </p>
                 </div>
 
@@ -2501,7 +2315,7 @@ export default function MediaDetailPage() {
                     key={season.seasonNumber}
                     type="button"
                     onClick={() => item.tmdbId && loadSeason(item.tmdbId, season.seasonNumber)}
-                    className={`flex-shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+                    className={`min-h-11 flex-shrink-0 rounded-xl border px-4 py-2 text-xs font-semibold transition ${
                       selectedSeasonNumber === season.seasonNumber
                         ? "border-purple-400 bg-purple-500 text-white shadow-sm"
                         : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-300"
@@ -2546,17 +2360,14 @@ export default function MediaDetailPage() {
               {loadingSeason ? (
                 <PageLoading variant="episodes" label="Bölümler hazırlanıyor…" description="Seçtiğin sezonun bölüm bilgileri getiriliyor." />
               ) : seasonDetails ? (
-                <div className="mt-4 grid max-h-[640px] grid-cols-1 gap-2 overflow-y-auto pr-1">
+                <div className="mt-4 grid grid-cols-1 gap-3">
                   {seasonDetails.episodes.map((episode) => {
                     const key = episodeKey(episode.seasonNumber, episode.episodeNumber);
                     const checked = Boolean(watchedEpisodes[key]);
 
                     return (
-                      <button
+                      <article
                         key={key}
-                        type="button"
-                        onClick={() => toggleEpisodeWatched(episode)}
-                        disabled={!episodeTrackingEnabled}
                         className={`w-full rounded-2xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
                           checked
                             ? "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30"
@@ -2564,15 +2375,15 @@ export default function MediaDetailPage() {
                         }`}
                       >
                         <div className="flex gap-3">
-                          <div
-                            className={`mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border ${
+                          <button type="button" aria-label={`${getEpisodeHeading(episode)} ${checked?"izlenmedi olarak işaretle":"izlendi olarak işaretle"}`} aria-pressed={checked} disabled={!episodeTrackingEnabled} onClick={()=>toggleEpisodeWatched(episode)}
+                            className={`mt-0 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md border ${
                               checked
                                 ? "border-emerald-500 bg-emerald-500 text-white"
                                 : "border-slate-300 dark:border-slate-700"
                             }`}
                           >
-                            {checked ? <CheckCircle2 className="h-4 w-4" /> : null}
-                          </div>
+                            {checked ? <CheckCircle2 className="h-5 w-5" /> : <span className="h-4 w-4 rounded border border-current opacity-40"/>}
+                          </button>
 
                           {episode.stillUrl ? (
                             <button
@@ -2585,7 +2396,7 @@ export default function MediaDetailPage() {
                                   subtitle: `Sezon ${episode.seasonNumber}, Bölüm ${episode.episodeNumber}`,
                                 });
                               }}
-                              className="h-14 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-slate-200 ring-1 ring-slate-200/80 transition hover:scale-[1.03] dark:bg-slate-800 dark:ring-slate-700"
+                              className="h-16 w-20 flex-shrink-0 sm:w-28 overflow-hidden rounded-xl bg-slate-200 ring-1 ring-slate-200/80 transition hover:scale-[1.03] dark:bg-slate-800 dark:ring-slate-700"
                               title="Bölüm görselini büyüt"
                             >
                               <img
@@ -2617,7 +2428,7 @@ export default function MediaDetailPage() {
                             ) : null}
                           </div>
                         </div>
-                      </button>
+                      </article>
                     );
                   })}
                 </div>
@@ -2630,7 +2441,7 @@ export default function MediaDetailPage() {
           ) : null}
 
           {item.type === "TV" && watchedEpisodeList.length > 0 ? (
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-5">
+            <section className="scroll-mt-28 rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
               <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Seçili izlenen bölümler</h2>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 Kayıtlı bölüm listesini buradan hızlıca kontrol edip kaldırabilirsin.
@@ -2658,10 +2469,10 @@ export default function MediaDetailPage() {
           ) : null}
 
           {actionHistory.length > 0 ? (
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-5">
+            <section className="scroll-mt-28 rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-sm font-black text-slate-900 dark:text-slate-50">Son işlemler</h2>
+                  <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Son işlemler</h2>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     Puan, durum ve bölüm değişiklikleri açıklamalı olarak tutulur.
                   </p>
@@ -2678,7 +2489,7 @@ export default function MediaDetailPage() {
                     className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900"
                   >
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                      <p className="text-sm font-black text-slate-900 dark:text-slate-50">{formatStoredActionText(action.title, action.at)}</p>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{formatStoredActionText(action.title, action.at)}</p>
                       <p className="text-[11px] font-bold text-slate-400">{formatDateTime(action.at)}</p>
                     </div>
                     {action.details.length > 0 ? (
@@ -2699,12 +2510,12 @@ export default function MediaDetailPage() {
             </section>
           ) : null}
 
-          <section className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-5">
-            <p className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Ek bilgiler</p>
+          <section className="scroll-mt-28 rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+            <h2 id="media-info" className="mb-5 scroll-mt-28 text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Oyuncular ve içerik bilgileri</h2>
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
-                <p className="text-xs font-semibold uppercase text-slate-400">Yönetmen / Creator</p>
+                <p className="text-xs font-semibold uppercase text-slate-400">Yönetmen / Yaratıcı</p>
                 <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">
                   {item.type === "MOVIE" ? item.director || "Bilinmiyor" : item.creators?.join(", ") || "Bilinmiyor"}
                 </p>
@@ -2769,7 +2580,7 @@ export default function MediaDetailPage() {
                       <button
                         type="button"
                         onClick={() => setShowAllActors((current) => !current)}
-                        className="mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
+                        className="mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
                       >
                         {showAllActors
                           ? "Oyuncu listesini kısalt"
