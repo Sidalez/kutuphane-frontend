@@ -1,6 +1,17 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
 const output={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/utils/personalHub.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:output,Date,Set,Number,String,Math});
 const {localDate,monthDays,csv,readingEvent,watchEvent,eventStats}=output;
+test('Legacy reading times are recovered, midnight is handled and missing durations stay unknown',()=>{
+ assert.equal(output.readingMinutes({startTime:'20:00',endTime:'20:35'}),35);
+ assert.equal(output.readingMinutes({durationMinutes:null,startTime:'23:50',endTime:'00:15'}),25);
+ assert.equal(output.readingMinutes({durationMinutes:10,startTime:'20:00',endTime:'20:35'}),10);
+ assert.equal(output.readingMinutes({startTime:'25:00',endTime:'26:00'}),null);
+ assert.equal(output.readingMinutes({}),null);
+ const book={id:'b',kind:'BOOK',title:'Kitap',url:'/library/b'};
+ assert.equal(output.readingSummary([readingEvent(book,{id:'1',totalRead:57})]),'Süre girilmedi');
+ assert.equal(output.readingSummary([readingEvent(book,{id:'1'}),readingEvent(book,{id:'2',startTime:'20:00',endTime:'20:35'})]),'35 dk (eksik süreler var)');
+ assert.equal(output.formatHubMinutes(2885),'48 sa 5 dk');
+});
 test('Calendar begins on Monday, includes leap day and keeps local dates',()=>{
  const days=monthDays('2024-02');assert.equal(days.length,42);assert.equal(days[0],'2024-01-29');assert.ok(days.includes('2024-02-29'));assert.equal(days[41],'2024-03-10');
  assert.equal(localDate(new Date(2026,9,12,0,5)),'2026-10-12');
