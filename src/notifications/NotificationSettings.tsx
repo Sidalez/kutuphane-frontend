@@ -29,12 +29,15 @@ export default function NotificationSettings() {
       <fieldset disabled={disabled || !draft.enabled} className="mt-3 min-w-0 border-t border-slate-100 pt-2 disabled:opacity-50 dark:border-slate-800">
         <legend className="sr-only">Bildirim türleri ve zamanları</legend>
         {([
+          ["trailers", "Yeni fragmanlar", "Film ve diziler için resmî fragmanlar. TMDB ve desteklenen resmî kanal kaynağında bölüm eşleşmesi doğrulanır."],
+          ["upcoming", "Yayından iki gün önce", "Dizilerin sıradaki bölümü ve filmlerin Türkiye sinema/dijital yayın tarihi için hatırlatma. Kaynakta bulunmayan saat gösterilmez."],
           ["episodes", "Yeni bölümler", "Kütüphanendeki dizilerin yeni bölümleri yayımlandığında."],
           ["seasons", "Yeni sezon tarihleri", "Takip ettiğin dizinin yeni sezon tarihi açıklandığında."],
           ["reading", "Okuma molası", "Seçtiğin saatte günlük, kısa bir okuma hatırlatması."],
           ["readingFollowUp", "Okuma ritmim", "Son okuma kaydının başlangıcından 24 saat sonra; kitabın, okuduğun süre ve sayfalarla kişisel hatırlatma."],
           ["watching", "Kaldığın yerden devam et", "İzlediğin bir içerik varsa pazar günü haftalık hatırlatma."],
         ] as const).map(([key, title, detail]) => <Toggle key={key} title={title} detail={detail} checked={draft[key]} disabled={disabled || !draft.enabled} onChange={value => setDraft(d => ({ ...d, [key]: value }))} />)}
+        {draft.upcoming && <label className="mb-4 block text-xs font-semibold">Yaklaşan yayın hatırlatma saati<input type="time" required value={draft.upcomingTime} onChange={e => setDraft(d => ({ ...d, upcomingTime: e.target.value }))} className={input} /></label>}
         {(draft.reading || draft.watching) && <label className="mb-4 block text-xs font-semibold">Hatırlatma saati<input type="time" required value={draft.reminderTime} onChange={e => setDraft(d => ({ ...d, reminderTime: e.target.value }))} className={input} /></label>}
         <div className="mt-4 rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/60">
           <label className="block text-xs font-semibold">Telefon bildirimlerinin zamanı<select value={draft.delivery} onChange={e => setDraft(d => ({ ...d, delivery: e.target.value as "instant" | "daily" }))} className={input}><option value="instant">Yeni gelişmeler geldikçe</option><option value="daily">Günde bir kez özet</option></select></label>
