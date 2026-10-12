@@ -15,7 +15,7 @@ export default defineConfig({
     },
   }, VitePWA({
     registerType: "prompt",
-    includeAssets: ["icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"],
+    includeAssets: ["boot-recovery.js","icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"],
     manifest: {
       id: "/", name: "Kütüphanem", short_name: "Kütüphanem", lang: "tr", description: "Kitaplarını, filmlerini ve okuma hedeflerini takip et.",
       start_url: "/today", scope: "/", display: "standalone", background_color: "#fffaf3", theme_color: "#fffaf3",
@@ -33,7 +33,7 @@ export default defineConfig({
       navigateFallbackDenylist: [/^\/api\//, /^\/__/],
       cleanupOutdatedCaches: true,
       manifestTransforms: [async entries => ({
-        manifest: entries.filter(entry => currentBuildFiles.has(entry.url) || entry.url === "index.html" || entry.url === "manifest.webmanifest" || entry.url.startsWith("icons/")),
+        manifest: entries.filter(entry => currentBuildFiles.has(entry.url) || entry.url === "boot-recovery.js" || entry.url === "index.html" || entry.url === "manifest.webmanifest" || entry.url.startsWith("icons/")),
         warnings: [],
       })],
       // The application shell is precached. Firestore manages authenticated data persistence separately.

@@ -29,7 +29,7 @@ export default function App() {
   const { user, loading } = useAuth();
 
   const location = useLocation();
-  if (loading) return <PageLoading fullScreen label="Oturumun hazırlanıyor…" />;
+  if (loading) return <><AppFeedback /><PageLoading fullScreen label="Oturumun hazırlanıyor…" /></>;
 
   return (
     <>

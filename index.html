@@ -34,6 +34,7 @@
   <body>
     <div id="root"><div class="boot" role="status"><img src="/icons/icon-192.png" width="80" height="80" alt="" /><strong>Kütüphanem</strong><span class="boot-ring" aria-hidden="true"></span><span>Uygulama hazırlanıyor…</span></div></div>
     <noscript>Uygulamayı kullanmak için tarayıcında JavaScript’i etkinleştir.</noscript>
-    <script type="module" src="/src/main.tsx"></script>
+    <script src="/boot-recovery.js"></script>
+    <script type="module" src="/src/main.tsx" onerror="window.recoverAppVersion && window.recoverAppVersion(false)"></script>
   </body>
 </html>
