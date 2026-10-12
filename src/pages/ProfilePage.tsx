@@ -1,4 +1,5 @@
 import PageLoading from "../components/feedback/PageLoading";
+import DeviceSessions from '../components/DeviceSessions';
 import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 // src/pages/ProfilePage.tsx
 import { FormEvent, useState } from "react";
@@ -297,6 +298,7 @@ export default function ProfilePage() {
         </form>
       </div>
 
+      <DeviceSessions />
       {status && (
         <div
           className={`text-xs mt-1 px-3 py-2 rounded-xl border flex items-start gap-2 ${

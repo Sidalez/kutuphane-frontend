@@ -1,5 +1,6 @@
 import { useAppDialog } from "../components/feedback/DialogProvider";
 import { removeDeviceNotifications } from "../notifications/api";
+import {trackDeviceSession,currentSessionId,revokeSessions,clearSessionId} from './deviceSessions';
 // src/auth/AuthContext.tsx
 import {
   createContext,
@@ -59,6 +60,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const dialog = useAppDialog();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionError,setSessionError]=useState('');
+  useEffect(()=>{setSessionError('');if(user)return trackDeviceSession(user,setSessionError)},[user?.uid]);
   const [profileLoadedUid, setProfileLoadedUid] = useState<string | null>(null);
   const profileLoading = Boolean(user && profileLoadedUid !== user.uid);
   const [avatar, setAvatar] = useState<{ uid: string; url: string } | null>(null);
@@ -130,7 +133,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     await removeDeviceNotifications().catch(() => undefined);
-    await signOut(auth);
+    try {
+      if(user&&navigator.onLine)await revokeSessions(user.uid,[currentSessionId(user.uid)]);
+    } finally {
+      if(user)clearSessionId(user.uid);
+      await signOut(auth);
+    }
   };
 
   return (
@@ -147,6 +155,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout,
       }}
     >
+      {sessionError&&user&&<p role="alert" className="fixed left-4 right-4 top-20 z-50 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{sessionError}</p>}
       {children}
     </AuthContext.Provider>
   );
