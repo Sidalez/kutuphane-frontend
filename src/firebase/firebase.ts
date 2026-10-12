@@ -17,5 +17,7 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+// Ask which Google account to use instead of silently reusing the browser session.
+googleProvider.setCustomParameters({ prompt: "select_account" });
 export const db = getFirestore(app);
 export const storage = getStorage(app);
