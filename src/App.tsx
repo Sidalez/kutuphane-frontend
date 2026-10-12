@@ -7,6 +7,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import Layout from "./layout/Layout";
 
+const PersonalHubPage = lazy(() => import("./pages/PersonalHubPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -38,15 +39,17 @@ export default function App() {
     <Routes>
       <Route
         path="/login"
-        element={user ? <Navigate to="/library" replace /> : <LoginPage />}
+        element={user ? <Navigate to="/today" replace /> : <LoginPage />}
       />
 
       {!user && <Route path="*" element={<Navigate to="/login" replace />} />}
 
       {user && (
         <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/library" replace />} />
+          <Route path="/" element={<Navigate to="/today" replace />} />
 
+          {["today","calendar","notes","collections","data","support"].map(path=><Route key={path} path={`/${path}`} element={<PersonalHubPage />} />)
+          }
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/library/:id" element={<BookDetailPage />} />
           <Route path="/add-book" element={<AddBookPage />} />

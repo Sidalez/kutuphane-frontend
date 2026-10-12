@@ -12,6 +12,7 @@ import {
   Clapperboard,
   Settings,
   Bell,
+  Sun, CalendarDays, NotebookPen, FolderHeart, Download, MessageSquare,
 } from "lucide-react";
 
 const bookNavItems = [
@@ -60,7 +61,7 @@ export default function SideNav({ isOpen, onClose }: SideNavProps) {
 
   const activeItems = isMediaModule ? mediaNavItems : bookNavItems;
 
-  const moduleTitle = isMediaModule ? "Film & Dizi Modülü" : "Kitap Modülü";
+  const moduleTitle = ["/today", "/calendar", "/notes", "/collections", "/data", "/support"].includes(location.pathname) ? "Kişisel alan" : isMediaModule ? "Film & Dizi Modülü" : "Kitap Modülü";
 
   const tipText = isMediaModule
     ? "Film ve dizi kayıtlarını düzenli tuttukça, izleme istatistiklerin daha anlamlı hale gelir."
@@ -118,6 +119,8 @@ export default function SideNav({ isOpen, onClose }: SideNavProps) {
         </div>
 
         <nav className="flex-1 px-2 pb-4 space-y-1">
+          {[{to:"/today",label:"Bugün",icon:Sun},{to:"/calendar",label:"Takvim",icon:CalendarDays},{to:"/notes",label:"Notlar ve alıntılar",icon:NotebookPen},{to:"/collections",label:"Koleksiyonlar",icon:FolderHeart},{to:"/data",label:"Verilerim",icon:Download},{to:"/support",label:"Sorun bildir",icon:MessageSquare}].map(item=><NavLink key={item.to} to={item.to} onClick={onClose} className={({isActive})=>getNavLinkClass(isActive)}><span className="flex h-8 w-8 shrink-0 items-center justify-center"><item.icon className="h-4 w-4" /></span>{item.label}</NavLink>)}
+          <div className="my-3 border-t border-slate-100 dark:border-slate-800" />
           {activeItems.map((item) => {
             const Icon = item.icon;
 

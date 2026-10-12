@@ -2,6 +2,7 @@ import type { PageLoadingProps } from "./PageLoading";
 
 /** Used both while a page bundle opens and while its data loads. */
 export function pageLoadingConfig(path: string): PageLoadingProps {
+  if (["/today","/calendar","/notes","/collections","/data","/support"].includes(path)) return {variant:"dashboard", section:"Kişisel alanın", label:"Kişisel alanın hazırlanıyor…", description:"Kitapların, izlediklerin ve kişisel kayıtların getiriliyor."};
   if (path === "/notifications") return {variant:"settings", section:"Bildirim merkezi", label:"Bildirimlerin hazırlanıyor…", description:"Yeni gelişmeler ve bildirim tercihlerin getiriliyor."};
   if (path === "/media/reports") return {variant:"dashboard", section:"İzleme raporları", label:"İzleme raporların hazırlanıyor…", description:"İzleme geçmişin, sürelerin ve dönem özetlerin getiriliyor."};
   if (path === "/media/suggestions") return {variant:"media-suggestions", section:"Film ve dizi keşfi", label:"Keşif alanın hazırlanıyor…", description:"İzleme geçmişin ve tercihlerin getiriliyor."};

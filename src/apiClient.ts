@@ -1,3 +1,4 @@
+import { recordIssue } from "./utils/appIssue";
 import { beginActivity } from "./requestActivity";
 import axios from "axios";
 
@@ -20,4 +21,4 @@ export const api = axios.create({
 
 const activeRequests = new WeakMap<object, () => void>();
 api.interceptors.request.use(config => { activeRequests.set(config, beginActivity()); return config; });
-api.interceptors.response.use(response => { activeRequests.get(response.config)?.(); return response; }, error => { if (error.config) activeRequests.get(error.config)?.(); return Promise.reject(error); });
+api.interceptors.response.use(response => { activeRequests.get(response.config)?.(); return response; }, error => { recordIssue(error.response?.status || 0,error.response?.data?.errorId); if (error.config) activeRequests.get(error.config)?.(); return Promise.reject(error); });

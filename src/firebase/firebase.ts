@@ -1,7 +1,7 @@
 // src/firebase/firebase.ts
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -19,5 +19,5 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 // Ask which Google account to use instead of silently reusing the browser session.
 googleProvider.setCustomParameters({ prompt: "select_account" });
-export const db = getFirestore(app);
+export const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 export const storage = getStorage(app);

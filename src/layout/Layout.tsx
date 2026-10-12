@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import TopBar from "../components/TopBar";
 import SideNav from "../components/SideNav";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { LibraryBig, Clapperboard, Plus, Sparkles, Menu } from "lucide-react";
+import { LibraryBig, Clapperboard, Plus, Sparkles, Menu, Sun } from "lucide-react";
 
 export default function Layout() {
   // 🟡 Mobil menü açılsın mı kapansın mı state'i
@@ -22,6 +22,7 @@ export default function Layout() {
     return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", close); };
   }, [isSideOpen]);
   const tabs = [
+    { to: "/today", label: "Bugün", icon: Sun, active: pathname === "/today" },
     { to: "/library", label: "Kitaplar", icon: LibraryBig, active: pathname.startsWith("/library") || pathname.startsWith("/edit/") },
     { to: "/media", label: "Film & Dizi", icon: Clapperboard, active: pathname.startsWith("/media") && !pathname.includes("suggestions") && !pathname.includes("reports") },
     { to: isMedia ? "/add-media" : "/add-book", label: "Ekle", icon: Plus, active: pathname.startsWith("/add-"), primary: true },
@@ -45,14 +46,14 @@ export default function Layout() {
           <Suspense fallback={<PageLoading {...pageLoadingConfig(pathname)} />}><div key={pathname} className="app-page-enter"><Outlet /></div></Suspense>
         </main>
       </div>
-      <nav aria-label="Ana gezinme" data-mobile-nav className="fixed bottom-0 inset-x-0 z-30 grid grid-cols-5 border-t border-orange-100/80 bg-white/95 px-2 pt-2 pb-[calc(.5rem+env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(15,23,42,.06)] backdrop-blur-xl md:hidden dark:border-slate-800 dark:bg-slate-950/95">
+      <nav aria-label="Ana gezinme" data-mobile-nav className="fixed bottom-0 inset-x-0 z-30 grid grid-cols-6 border-t border-orange-100/80 bg-white/95 px-2 pt-2 pb-[calc(.5rem+env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(15,23,42,.06)] backdrop-blur-xl md:hidden dark:border-slate-800 dark:bg-slate-950/95">
         {tabs.map(({ to, label, icon: Icon, active, primary }) => (
           <NavLink key={label} to={to} aria-current={active ? "page" : undefined} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold transition active:scale-95 ${active ? "text-primary" : "text-slate-500 dark:text-slate-400"}`}>
             <span className={primary ? "-mt-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-orange-200/60 ring-4 ring-white dark:ring-slate-950 dark:shadow-none" : `flex h-7 w-10 items-center justify-center rounded-xl ${active ? "bg-orange-50 dark:bg-primary/15" : ""}`}><Icon className={primary ? "h-6 w-6" : "h-5 w-5"} strokeWidth={active ? 2.5 : 1.8} /></span>
             {label}
           </NavLink>
         ))}
-        <button type="button" aria-label="Diğer menüleri aç" aria-expanded={isSideOpen} aria-controls="app-navigation" onClick={() => setIsSideOpen(true)} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold active:scale-95 ${isSideOpen || ["/settings", "/profile", "/goals", "/statistics", "/media/reports"].includes(pathname) ? "text-primary" : "text-slate-500 dark:text-slate-400"}`}><span className="flex h-7 w-10 items-center justify-center"><Menu className="h-5 w-5" /></span>Diğer</button>
+        <button type="button" aria-label="Diğer menüleri aç" aria-expanded={isSideOpen} aria-controls="app-navigation" onClick={() => setIsSideOpen(true)} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold active:scale-95 ${isSideOpen || ["/settings", "/profile", "/goals", "/statistics", "/media/reports", "/calendar", "/notes", "/collections", "/data", "/support"].includes(pathname) ? "text-primary" : "text-slate-500 dark:text-slate-400"}`}><span className="flex h-7 w-10 items-center justify-center"><Menu className="h-5 w-5" /></span>Diğer</button>
       </nav>
     </div>
   );

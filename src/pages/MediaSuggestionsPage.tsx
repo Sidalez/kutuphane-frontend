@@ -1,3 +1,4 @@
+import { recordIssue } from "../utils/appIssue";
 import RecommendationFeedback, { FeedbackHistory } from "../components/RecommendationFeedback";
 import { useRecommendationFeedback } from "../hooks/useRecommendationFeedback";
 import ProcessingBadge, { type ProcessingInfo } from "../components/ProcessingBadge";
@@ -280,10 +281,12 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   try {
     data = rawText ? JSON.parse(rawText) : {};
   } catch {
-    throw new Error(`Backend JSON dönmedi: ${rawText.slice(0, 250)}`);
+    recordIssue(response.status);
+    throw new Error("Öneri servisi geçerli bir yanıt vermedi. Tekrar deneyebilirsin.");
   }
 
   if (!response.ok || data?.success === false) {
+    recordIssue(response.status,data?.errorId);
     throw new Error(data?.message || data?.error || `HTTP ${response.status}`);
   }
 

@@ -14,7 +14,7 @@ export default defineConfig({
     includeAssets: ["icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"],
     manifest: {
       id: "/", name: "Kütüphanem", short_name: "Kütüphanem", lang: "tr", description: "Kitaplarını, filmlerini ve okuma hedeflerini takip et.",
-      start_url: "/library", scope: "/", display: "standalone", background_color: "#fffaf3", theme_color: "#fffaf3",
+      start_url: "/today", scope: "/", display: "standalone", background_color: "#fffaf3", theme_color: "#fffaf3",
       icons: [
         {src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any"},
         {src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any"},
@@ -32,7 +32,7 @@ export default defineConfig({
         manifest: entries.filter(entry => currentBuildFiles.has(entry.url) || entry.url === "index.html" || entry.url === "manifest.webmanifest" || entry.url.startsWith("icons/")),
         warnings: [],
       })],
-      // Only the application shell is cached. API and Firebase responses stay on the network.
+      // The application shell is precached. Firestore manages authenticated data persistence separately.
       runtimeCaching: [],
     },
   })],
