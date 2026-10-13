@@ -25,6 +25,7 @@ import { doc, setDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
+  startupError: string;
   profilePhotoURL: string | null;
   profileLoading: boolean;
   saveProfilePhoto: (photo: string) => Promise<void>;
@@ -62,6 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionError,setSessionError]=useState('');
+  const [startupError,setStartupError]=useState('');
   useEffect(()=>{if(user){setSessionError('');return trackDeviceSession(user,setSessionError)}},[user?.uid]);
   const [profileLoadedUid, setProfileLoadedUid] = useState<string | null>(null);
   const profileLoading = Boolean(user && profileLoadedUid !== user.uid);
@@ -90,15 +92,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    let cancelled=false;
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if(!firebaseUser){setUser(null);setLoading(false);return;}
-      setLoading(true);
-      try{const ready=await bootstrapSecureSession(firebaseUser);if(!cancelled&&auth.currentUser?.uid===ready.uid)setUser(ready);}
-      catch(error){if(!cancelled&&auth.currentUser?.uid===firebaseUser.uid){setSessionError(error instanceof Error?error.message:'Oturum doğrulanamadı.');setUser(null);await signOut(auth);}}
-      finally{if(!cancelled)setLoading(false);}
-    });
-    return () => {cancelled=true;unsub();};
+    let cancelled=false,revision=0;
+    const watchdog=window.setTimeout(()=>{if(!cancelled)setStartupError('Oturum hazırlanamadı. Bağlantını kontrol edip yeniden dene.');},30000);
+    const unsub=onAuthStateChanged(auth,async firebaseUser=>{
+      const current=++revision;
+      if(!firebaseUser){clearTimeout(watchdog);setUser(null);setLoading(false);setStartupError('');return;}
+      setLoading(true);setStartupError('');
+      try{
+        const ready=await bootstrapSecureSession(firebaseUser);
+        if(!cancelled&&current===revision&&auth.currentUser?.uid===ready.uid){setUser(ready);setStartupError('');}
+      }catch(error){
+        if(!cancelled&&current===revision&&auth.currentUser?.uid===firebaseUser.uid){
+          // Connectivity failures must not erase a valid Firebase login.
+          setStartupError(error instanceof Error?error.message:'Oturum doğrulanamadı. Tekrar dene.');
+        }
+      }finally{if(!cancelled&&current===revision){clearTimeout(watchdog);setLoading(false);}}
+    },()=>{clearTimeout(watchdog);if(!cancelled){setStartupError('Oturum bilgisi alınamadı. Yeniden dene.');setLoading(false);}});
+    return()=>{cancelled=true;clearTimeout(watchdog);unsub();};
   }, []);
 
   const signInWithGoogle = async () => {
@@ -154,6 +164,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         loading,
+        startupError,
         profilePhotoURL,
         profileLoading,
         saveProfilePhoto,

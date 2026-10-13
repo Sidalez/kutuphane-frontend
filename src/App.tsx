@@ -26,9 +26,10 @@ const MediaDetailPage = lazy(() => import("./pages/MediaDetailPage"));
 const MediaReportsPage = lazy(() => import("./pages/MediaReportsPage"));
 const MediaSuggestionsPage = lazy(() => import("./pages/MediaSuggestionsPage"));
 export default function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, startupError } = useAuth();
 
   const location = useLocation();
+  if(startupError)return <><AppFeedback/><div role="alert" className="flex min-h-[100dvh] items-center justify-center bg-[#fffaf3] p-6 dark:bg-slate-950"><div className="w-full max-w-sm rounded-3xl border border-orange-100 bg-white p-7 text-center dark:border-slate-800 dark:bg-slate-900"><h1 className="text-xl font-semibold">Bağlantıyı yeniden deneyelim</h1><p className="mt-4 text-sm leading-7 text-slate-500 dark:text-slate-400">{startupError}</p><button type="button" onClick={()=>window.location.reload()} className="mt-6 min-h-12 w-full rounded-2xl bg-orange-600 px-5 text-sm font-semibold text-white">Yeniden dene</button><p className="mt-4 text-xs leading-6 text-slate-400">Bu işlem hesabını veya kayıtlarını silmez.</p></div></div></>;
   if (loading) return <><AppFeedback /><PageLoading fullScreen label="Oturumun hazırlanıyor…" /></>;
 
   return (
