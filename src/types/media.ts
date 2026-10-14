@@ -28,6 +28,7 @@ export type WatchedEpisode = {
 export type MediaItem = {
   id?: string;
   userId: string;
+  favorite?: boolean;
 
   type: MediaType;
 

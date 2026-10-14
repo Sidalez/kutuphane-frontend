@@ -1,0 +1,2 @@
+export function normalizeSearch(value:unknown):string{return String(value??'').toLocaleLowerCase('tr-TR').replace(/ı/g,'i').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();}
+export function matchesSearch(query:string,values:unknown[]):boolean{const tokens=normalizeSearch(query).split(' ').filter(Boolean);const text=normalizeSearch(values.filter(v=>v!==null&&v!==undefined).join(' '));return tokens.every(token=>text.includes(token));}

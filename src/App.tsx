@@ -7,6 +7,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import Layout from "./layout/Layout";
 
+const FavoritesPage=lazy(()=>import("./pages/FavoritesPage"));
 const PersonalHubPage = lazy(() => import("./pages/PersonalHubPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
@@ -51,6 +52,7 @@ export default function App() {
 
           {["today","calendar","notes","collections","data","support"].map(path=><Route key={path} path={`/${path}`} element={<PersonalHubPage />} />)
           }
+          <Route path="/favorites" element={<FavoritesPage/>}/>
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/library/:id" element={<BookDetailPage />} />
           <Route path="/add-book" element={<AddBookPage />} />

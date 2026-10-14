@@ -12,7 +12,15 @@ export async function bootstrapSecureSession(user:User):Promise<User>{
  const task=(async()=>{
   // Check the public feature flag before asking Firebase to refresh a token.
   // Legacy mode needs no custom claim and must not wait for token refresh.
-  const config=await sessionRequest('/config');enabled=config.enabled;
+  let config;
+  try{config=await sessionRequest('/config');}
+  catch{
+   // Backend availability must not gate the existing Firebase session.
+   // Firestore rules and backend token validation still enforce device revocation.
+   try{enabled=/^[a-f0-9]{48}$/.test(localStorage.getItem(`device-session:${user.uid}`)||'');}catch{enabled=false;}
+   return user;
+  }
+  enabled=config.enabled;
   if(!enabled)return user;
   if(!config.ready)throw new Error('Güvenli oturum sunucusu hazır değil.');
   const claims=await withDeadline(user.getIdTokenResult(),12000,'Oturum doğrulaması zaman aşımına uğradı. Tekrar dene.');

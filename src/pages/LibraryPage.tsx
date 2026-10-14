@@ -1,3 +1,4 @@
+import {matchesSearch} from '../utils/search';
 import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 import ContinueReading from "../components/books/ContinueReading";
 import PageLoading from "../components/feedback/PageLoading";
@@ -79,12 +80,7 @@ export default function LibraryPage() {
     }
 
     if (search.trim()) {
-      const q = search.toLocaleLowerCase("tr-TR");
-      list = list.filter((b) => {
-        const title = (b.title || "").toLocaleLowerCase("tr-TR");
-        const author = (b.author || "").toLocaleLowerCase("tr-TR");
-        return title.includes(q) || author.includes(q);
-      });
+      list = list.filter(b=>matchesSearch(search,[b.title,b.author,b.publisher,b.isbn?.replace(/[- ]/g,''),b.publishYear,...(b.categories||[])]));
     }
 
     return list;

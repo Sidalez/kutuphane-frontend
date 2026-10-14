@@ -6,6 +6,7 @@ export type BookStatus = "OKUNACAK" | "OKUNUYOR" | "OKUNDU";
 export interface Book {
   id: string;
   userId: string;
+  favorite?: boolean;
   title: string;
   author?: string | null;
   publisher?: string | null;

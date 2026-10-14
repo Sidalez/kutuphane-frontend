@@ -1,3 +1,5 @@
+import FavoriteButton from '../components/FavoriteButton';
+import {matchesSearch as searchMatches} from '../utils/search';
 import { compareLastWatched } from "../utils/mediaWatchOrder";
 import { pageLoadingConfig } from "../components/feedback/pageLoadingConfig";
 import PageLoading from "../components/feedback/PageLoading";
@@ -369,7 +371,7 @@ export default function MediaLibraryPage() {
         statusFilter === "ALL" ? true : item.status === statusFilter;
 
       const matchesSearch = search
-        ? getSearchableText(item).includes(search)
+        ? searchMatches(search,[getSearchableText(item)])
         : true;
 
       return matchesMedia && matchesStatus && matchesSearch;
@@ -841,6 +843,7 @@ export default function MediaLibraryPage() {
 
                     <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 via-white/40 dark:via-slate-900/50 to-transparent pointer-events-none" />
 
+                    <div className="absolute top-3 left-3"><FavoriteButton id={item.id!} kind={item.type} favorite={item.favorite} owner={item.userId}/></div>
                     <div className="absolute top-3 right-3">
                       <span
                         className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold backdrop-blur-sm ${getStatusBadgeClass(

@@ -10,3 +10,9 @@ test('Disabled secure sessions open without token refresh, even when Firebase to
  const session=load('src/auth/secureSession.ts',{navigator:{onLine:true},require:id=>id.includes('withDeadline')?deadline:id==='firebase/auth'?{}:id.includes('firebase/firebase')?{auth:{currentUser:user}}:id.includes('apiClient')?{API_BASE_URL:'http://test'}:{},fetch:async()=>({status:200,ok:true,json:async()=>({enabled:false,ready:true})})});
  assert.equal(await deadline.withDeadline(session.bootstrapSecureSession(user),100,'startup blocked'),user);assert.equal(tokens,0);
 });
+
+test('Backend network failure preserves the Firebase session and cached secure mode',async()=>{
+ const user={uid:'u'};
+ const session=load('src/auth/secureSession.ts',{navigator:{onLine:true},localStorage:{getItem:()=> 'a'.repeat(48)},require:id=>id.includes('withDeadline')?deadline:id==='firebase/auth'?{}:id.includes('firebase/firebase')?{auth:{currentUser:user}}:id.includes('apiClient')?{API_BASE_URL:'http://test'}:{},fetch:async()=>{throw new TypeError('Failed to fetch')}});
+ assert.equal(await session.bootstrapSecureSession(user),user);assert.equal(session.hasSecureSession(),true);
+});

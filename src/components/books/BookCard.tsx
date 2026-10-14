@@ -1,3 +1,4 @@
+import FavoriteButton from '../FavoriteButton';
 // src/components/books/BookCard.tsx
 
 import { useMemo, useState } from "react";
@@ -219,6 +220,7 @@ export default function BookCard({ book }: BookCardProps) {
 
           {/* Sağ taraf: içerik */}
           <div className="flex flex-1 flex-col gap-2 min-w-0">
+            <div className="flex justify-end"><FavoriteButton id={book.id} kind="BOOK" owner={book.userId} favorite={book.favorite}/></div>
             {/* Üst satır: başlık + durum + rating */}
             <div className="flex items-start justify-between gap-3">
               {/* Başlık + yazar + yayın bilgisi + durum pill */}
