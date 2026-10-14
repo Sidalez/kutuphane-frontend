@@ -27,7 +27,7 @@ export default function LoginPage() {
    fullName:mode==='register'&&!fullName.trim()?'Adını ve soyadını gir.':'',
    email:!email.trim()?'E-posta adresini gir.':!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())?'Geçerli bir e-posta adresi gir.':'',
    password:!password?'Şifreni gir.':mode==='register'&&password.length<6?'En az 6 karakter kullan.':'',
-   password2:mode==='register'&&(!password2?'Şifreni tekrar gir.':password!==password2?'Şifreler eşleşmiyor.':'')
+   password2:mode==='register'?(!password2?'Şifreni tekrar gir.':password!==password2?'Şifreler eşleşmiyor.':''):''
   };
   const values:Record<string,string>={fullName,email,password,password2};
   const mark=(key:string)=>setTouched(old=>({...old,[key]:true}));
