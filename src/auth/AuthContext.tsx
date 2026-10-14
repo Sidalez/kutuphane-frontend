@@ -1,7 +1,8 @@
 import { useAppDialog } from "../components/feedback/DialogProvider";
 import { removeDeviceNotifications } from "../notifications/api";
 import {trackDeviceSession,currentSessionId,revokeSessions,clearSessionId} from './deviceSessions';
-import {bootstrapSecureSession} from './secureSession';
+import {bootstrapSecureSession,restoreSecureSessionMode} from './secureSession';
+import {openSessionImmediately} from './sessionStartup';
 // src/auth/AuthContext.tsx
 import {
   createContext,
@@ -64,7 +65,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [sessionError,setSessionError]=useState('');
   const [startupError,setStartupError]=useState('');
-  useEffect(()=>{if(user){setSessionError('');return trackDeviceSession(user,setSessionError)}},[user?.uid]);
+  const [sessionRevision,setSessionRevision]=useState(0);
+  useEffect(()=>{if(user){setSessionError('');return trackDeviceSession(user,setSessionError)}},[user?.uid,sessionRevision]);
   const [profileLoadedUid, setProfileLoadedUid] = useState<string | null>(null);
   const profileLoading = Boolean(user && profileLoadedUid !== user.uid);
   const [avatar, setAvatar] = useState<{ uid: string; url: string } | null>(null);
@@ -94,19 +96,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let cancelled=false,revision=0;
     const watchdog=window.setTimeout(()=>{if(!cancelled)setStartupError('Oturum hazırlanamadı. Bağlantını kontrol edip yeniden dene.');},30000);
-    const unsub=onAuthStateChanged(auth,async firebaseUser=>{
+    const unsub=onAuthStateChanged(auth,firebaseUser=>{
       const current=++revision;
-      if(!firebaseUser){clearTimeout(watchdog);setUser(null);setLoading(false);setStartupError('');return;}
-      setLoading(true);setStartupError('');
-      try{
-        const ready=await bootstrapSecureSession(firebaseUser);
-        if(!cancelled&&current===revision&&auth.currentUser?.uid===ready.uid){setUser(ready);setStartupError('');}
-      }catch(error){
-        if(!cancelled&&current===revision&&auth.currentUser?.uid===firebaseUser.uid){
-          // Connectivity failures must not erase a valid Firebase login.
-          setStartupError(error instanceof Error?error.message:'Oturum doğrulanamadı. Tekrar dene.');
-        }
-      }finally{if(!cancelled&&current===revision){clearTimeout(watchdog);setLoading(false);}}
+      clearTimeout(watchdog);
+      if(!firebaseUser){setUser(null);setLoading(false);setStartupError('');return;}
+      restoreSecureSessionMode(firebaseUser.uid);
+      let published=false;
+      void openSessionImmediately(firebaseUser,ready=>{
+        if(cancelled||current!==revision||auth.currentUser?.uid!==ready.uid)return;
+        setUser(ready);setLoading(false);setStartupError('');
+        if(published)setSessionRevision(value=>value+1);
+        published=true;
+      },bootstrapSecureSession,()=>{
+        if(!cancelled&&current===revision)setSessionError('Cihaz oturumu kontrolü tamamlanamadı. İnternet bağlantısı geldiğinde yeniden deneyebilirsin.');
+      });
     },()=>{clearTimeout(watchdog);if(!cancelled){setStartupError('Oturum bilgisi alınamadı. Yeniden dene.');setLoading(false);}});
     return()=>{cancelled=true;clearTimeout(watchdog);unsub();};
   }, []);

@@ -16,3 +16,14 @@ test('Backend network failure preserves the Firebase session and cached secure m
  const session=load('src/auth/secureSession.ts',{navigator:{onLine:true},localStorage:{getItem:()=> 'a'.repeat(48)},require:id=>id.includes('withDeadline')?deadline:id==='firebase/auth'?{}:id.includes('firebase/firebase')?{auth:{currentUser:user}}:id.includes('apiClient')?{API_BASE_URL:'http://test'}:{},fetch:async()=>{throw new TypeError('Failed to fetch')}});
  assert.equal(await session.bootstrapSecureSession(user),user);assert.equal(session.hasSecureSession(),true);
 });
+
+test('An existing Firebase session is published before a pending backend check finishes',async()=>{
+ const startup=load('src/auth/sessionStartup.ts');const user={uid:'u'},published=[];let complete;
+ const pending=startup.openSessionImmediately(user,value=>published.push(value),()=>new Promise(resolve=>complete=resolve),()=>assert.fail('unexpected error'));
+ assert.equal(published.length,1);assert.equal(published[0],user);await Promise.resolve();complete(user);await pending;assert.equal(published.length,2);
+});
+test('A rejected background check never removes the published session',async()=>{
+ const startup=load('src/auth/sessionStartup.ts');const user={uid:'u'},published=[];let failed=false;
+ await startup.openSessionImmediately(user,value=>published.push(value),async()=>{throw Error('Failed to fetch')},()=>failed=true);
+ assert.equal(published.length,1);assert.equal(published[0],user);assert.equal(failed,true);
+});
