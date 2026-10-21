@@ -1,3 +1,4 @@
+import {observeReadingClock} from '../utils/readingClock';
 import ReadingSessionPanel from '../components/ReadingSessionPanel';
 import {useAppDialog} from '../components/feedback/DialogProvider';
 import {localDate} from "../utils/personalHub";
@@ -1112,15 +1113,10 @@ function LogsTab({
     }
   }, [bookStatus]);
 
-  // Kronometre tick
+  // Recalculate from persisted timestamps when iOS resumes a suspended page.
   useEffect(() => {
-    if (!timer || timer.status!=='running') return;
-
-    const id = setInterval(() => {
-      setElapsedMs(elapsedReadingMs(timer));
-    }, 1000);
-
-    return () => clearInterval(id);
+    if(!timer)return;
+    return observeReadingClock(timer,setElapsedMs);
   }, [timer]);
   const handleResetAutoSession = async () => {
     if(timerBusy)return;
