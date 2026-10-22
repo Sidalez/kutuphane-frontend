@@ -19,7 +19,7 @@ import {
 } from "firebase/firestore";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  AlertCircle,
+  AlertCircle, EyeOff,
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
@@ -2285,11 +2285,11 @@ export default function MediaDetailPage() {
 
         <div className="space-y-5 xl:col-span-1">
           {item.type === "TV" ? (
-            <section id="episodes" className="scroll-mt-28 scroll-mt-28 rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+            <section id="episodes" className="scroll-mt-28 rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-50">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-300">
+                  <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-300">
                       <Tv className="h-4 w-4" />
                     </span>
                     Sezonlar ve bölümler
@@ -2299,7 +2299,7 @@ export default function MediaDetailPage() {
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-purple-200 bg-purple-50 px-3 py-2 text-xs font-semibold text-purple-700 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-200">
+                <div className="self-start min-h-11 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
                   {watchedEpisodeList.length} bölüm seçildi
                 </div>
               </div>
@@ -2310,30 +2310,31 @@ export default function MediaDetailPage() {
                 </div>
               ) : null}
 
-              <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+              <div className="mt-6 flex gap-3 overflow-x-auto pb-3">
                 {seasons.map((season) => (
                   <button
                     key={season.seasonNumber}
                     type="button"
-                    onClick={() => item.tmdbId && loadSeason(item.tmdbId, season.seasonNumber)}
-                    className={`min-h-11 flex-shrink-0 rounded-xl border px-4 py-2 text-xs font-semibold transition ${
+                    disabled={loadingSeason} aria-pressed={selectedSeasonNumber===season.seasonNumber} onClick={() => item.tmdbId && loadSeason(item.tmdbId, season.seasonNumber)}
+                    className={`min-h-20 min-w-28 flex-shrink-0 rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition disabled:opacity-60 ${
                       selectedSeasonNumber === season.seasonNumber
-                        ? "border-purple-400 bg-purple-500 text-white shadow-sm"
+                        ? "border-[#183b35] bg-[#183b35] text-white shadow-md shadow-emerald-950/10 dark:border-emerald-300 dark:bg-emerald-300 dark:text-slate-950"
                         : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-300"
                     }`}
                   >
                     Sezon {season.seasonNumber}
-                    <span className="ml-1 opacity-80">({season.episodeCount})</span>
+                    <span className="mt-1.5 block text-[11px] font-normal opacity-65">{season.episodeCount} bölüm</span>
                   </button>
                 ))}
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
+              {seasonDetails&&!loadingSeason&&<div className="my-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/60"><div className="flex items-center justify-between gap-3 text-xs"><span className="font-semibold">Sezon {selectedSeasonNumber} ilerlemen</span><span className="text-slate-500">{seasonDetails.episodes.filter(e=>watchedEpisodes[episodeKey(e.seasonNumber,e.episodeNumber)]).length} / {seasonDetails.episodes.length} bölüm</span></div><progress aria-label="Sezon izleme ilerlemesi" max={Math.max(1,seasonDetails.episodes.length)} value={seasonDetails.episodes.filter(e=>watchedEpisodes[episodeKey(e.seasonNumber,e.episodeNumber)]).length} className="mt-3 h-1.5 w-full accent-emerald-600"/></div>}
+              <details className="mb-5 mt-3"><summary className="min-h-11 cursor-pointer py-3 text-xs font-semibold text-slate-500">Toplu bölüm işlemleri</summary><div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={markCurrentSeason}
                   disabled={!episodeTrackingEnabled || !seasonDetails}
-                  className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200"
+                  className="min-h-11 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200"
                 >
                   Bu sezonun tamamını işaretle
                 </button>
@@ -2342,7 +2343,7 @@ export default function MediaDetailPage() {
                   type="button"
                   onClick={clearCurrentSeason}
                   disabled={!episodeTrackingEnabled || !seasonDetails}
-                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-300"
+                  className="min-h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-300"
                 >
                   Bu sezonu temizle
                 </button>
@@ -2351,13 +2352,14 @@ export default function MediaDetailPage() {
                   type="button"
                   onClick={clearAllEpisodes}
                   disabled={!episodeTrackingEnabled || watchedEpisodeList.length === 0}
-                  className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200"
+                  className="inline-flex items-center gap-1 min-h-11 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200"
                 >
                   <RotateCcw className="h-3 w-3" />
                   Tüm seçimi temizle
                 </button>
               </div>
 
+              </details>
               {loadingSeason ? (
                 <PageLoading variant="episodes" label="Bölümler hazırlanıyor…" description="Seçtiğin sezonun bölüm bilgileri getiriliyor." />
               ) : seasonDetails ? (
@@ -2369,24 +2371,24 @@ export default function MediaDetailPage() {
                     return (
                       <article
                         key={key}
-                        className={`w-full rounded-2xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                        className={`group w-full overflow-hidden rounded-2xl border p-4 text-left transition duration-200 ${
                           checked
-                            ? "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30"
-                            : "border-slate-200 bg-white hover:border-purple-300 dark:border-slate-800 dark:bg-slate-900"
+                            ? "border-emerald-200/80 bg-emerald-50/40 dark:border-emerald-900/70 dark:bg-emerald-950/15"
+                            : "border-slate-200/80 bg-white hover:border-orange-200 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900"
                         }`}
                       >
-                        <div className="flex gap-3">
-                          <button type="button" aria-label={`${getEpisodeHeading(episode)} ${checked?"izlenmedi olarak işaretle":"izlendi olarak işaretle"}`} aria-pressed={checked} disabled={!episodeTrackingEnabled} onClick={()=>toggleEpisodeWatched(episode)}
-                            className={`mt-0 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md border ${
+                        <div className="flex flex-wrap items-start gap-3 sm:gap-4">
+                          <button type="button" aria-label={`Sezon ${episode.seasonNumber}, bölüm ${episode.episodeNumber} ${checked?"izlenmedi olarak işaretle":"izlendi olarak işaretle"}`} aria-pressed={checked} disabled={!episodeTrackingEnabled} onClick={()=>toggleEpisodeWatched(episode)}
+                            className={`mt-0 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border transition active:scale-95 disabled:opacity-40 ${
                               checked
-                                ? "border-emerald-500 bg-emerald-500 text-white"
+                                ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
                                 : "border-slate-300 dark:border-slate-700"
                             }`}
                           >
-                            {checked ? <CheckCircle2 className="h-5 w-5" /> : <span className="h-4 w-4 rounded border border-current opacity-40"/>}
+                            {checked ? <CheckCircle2 className="h-5 w-5" /> : <Play className="h-4 w-4 text-slate-400"/>}
                           </button>
 
-                          {(!checked&&!revealedEpisodes[key])?<button type="button" onClick={()=>setRevealedEpisodes(old=>({...old,[key]:true}))} className="min-h-14 w-20 shrink-0 rounded-xl bg-slate-100 p-2 text-[10px] text-slate-500 dark:bg-slate-800">Spoilerı göster</button>:episode.stillUrl ? (
+                          {(!checked&&!revealedEpisodes[key])?<button type="button" onClick={()=>setRevealedEpisodes(old=>({...old,[key]:true}))} className="flex h-20 w-24 shrink-0 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-2 text-[10px] font-medium text-slate-400 transition hover:text-orange-600 dark:border-slate-700 dark:bg-slate-950/50 sm:w-32"><EyeOff size={18}/>Spoilerı göster</button>:episode.stillUrl ? (
                             <button
                               type="button"
                               onClick={(event) => {
@@ -2397,7 +2399,7 @@ export default function MediaDetailPage() {
                                   subtitle: `Sezon ${episode.seasonNumber}, Bölüm ${episode.episodeNumber}`,
                                 });
                               }}
-                              className="h-16 w-20 flex-shrink-0 sm:w-28 overflow-hidden rounded-xl bg-slate-200 ring-1 ring-slate-200/80 transition hover:scale-[1.03] dark:bg-slate-800 dark:ring-slate-700"
+                              className="h-20 w-24 flex-shrink-0 sm:w-32 overflow-hidden rounded-xl bg-slate-200 ring-1 ring-slate-200/80 transition hover:scale-[1.03] dark:bg-slate-800 dark:ring-slate-700"
                               title="Bölüm görselini büyüt"
                             >
                               <img
@@ -2408,22 +2410,23 @@ export default function MediaDetailPage() {
                             </button>
                           ) : null}
 
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between gap-2">
-                              <p className="text-sm font-bold text-slate-900 dark:text-slate-50">
+                          <div className="min-w-[110px] flex-1">
+                            <div className="space-y-1">
+                              <p className="mb-1 text-[9px] font-semibold uppercase tracking-[.15em] text-slate-400">{checked?'İzlendi':'İzlenecek'} · S{episode.seasonNumber} B{episode.episodeNumber}</p>
+                              <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
                                 {!checked&&!revealedEpisodes[key]?`${episode.episodeNumber}. Bölüm`:getEpisodeHeading(episode)}
                               </p>
-                              <ChevronRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-300" />
+
                             </div>
 
                             <p className="mt-0.5 text-xs text-slate-500">
                               {episode.runtime ? `${episode.runtime} dk` : "Süre bilinmiyor"}
-                              {episode.airDate ? ` • ${episode.airDate}` : ""}
+                              {episode.airDate ? ` · ${formatDate(episode.airDate)}` : ""}
                               {episode.tmdbRating ? ` • ${episode.tmdbRating}/10` : ""}
                             </p>
 
                             {episode.overview && (checked||revealedEpisodes[key]) ? (
-                              <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                              <p className="mt-2 line-clamp-2 text-xs leading-6 text-slate-500 dark:text-slate-400">
                                 {episode.overview}
                               </p>
                             ) : null}
