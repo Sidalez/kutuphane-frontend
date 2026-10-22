@@ -1,3 +1,4 @@
+import SeriesSchedule from '../components/SeriesSchedule';
 import FavoriteButton from '../components/FavoriteButton';
 import {matchesSearch as searchMatches} from '../utils/search';
 import { compareLastWatched } from "../utils/mediaWatchOrder";
@@ -782,6 +783,7 @@ export default function MediaLibraryPage() {
           </div>
         </div>
 
+        <SeriesSchedule/>
         {filteredItems.length === 0 ? (
           <div className="mt-6">
             <div className="rounded-3xl border border-dashed border-indigo-100/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 p-10 text-center shadow-sm">

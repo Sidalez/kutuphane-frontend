@@ -886,6 +886,7 @@ export default function MediaDetailPage() {
     title: string;
     subtitle?: string;
   } | null>(null);
+  const [revealedEpisodes,setRevealedEpisodes]=useState<Record<string,boolean>>({});
   const [showAllActors, setShowAllActors] = useState(false);
   const [refreshingActors, setRefreshingActors] = useState(false);
 
@@ -2385,7 +2386,7 @@ export default function MediaDetailPage() {
                             {checked ? <CheckCircle2 className="h-5 w-5" /> : <span className="h-4 w-4 rounded border border-current opacity-40"/>}
                           </button>
 
-                          {episode.stillUrl ? (
+                          {(!checked&&!revealedEpisodes[key])?<button type="button" onClick={()=>setRevealedEpisodes(old=>({...old,[key]:true}))} className="min-h-14 w-20 shrink-0 rounded-xl bg-slate-100 p-2 text-[10px] text-slate-500 dark:bg-slate-800">Spoilerı göster</button>:episode.stillUrl ? (
                             <button
                               type="button"
                               onClick={(event) => {
@@ -2410,7 +2411,7 @@ export default function MediaDetailPage() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-2">
                               <p className="text-sm font-bold text-slate-900 dark:text-slate-50">
-                                {getEpisodeHeading(episode)}
+                                {!checked&&!revealedEpisodes[key]?`${episode.episodeNumber}. Bölüm`:getEpisodeHeading(episode)}
                               </p>
                               <ChevronRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-300" />
                             </div>
@@ -2421,7 +2422,7 @@ export default function MediaDetailPage() {
                               {episode.tmdbRating ? ` • ${episode.tmdbRating}/10` : ""}
                             </p>
 
-                            {episode.overview ? (
+                            {episode.overview && (checked||revealedEpisodes[key]) ? (
                               <p className="mt-1 line-clamp-2 text-xs text-slate-500">
                                 {episode.overview}
                               </p>
