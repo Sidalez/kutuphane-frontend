@@ -886,6 +886,7 @@ export default function MediaDetailPage() {
     title: string;
     subtitle?: string;
   } | null>(null);
+  const [episodeFilter,setEpisodeFilter]=useState<"ALL"|"UNWATCHED"|"WATCHED">("ALL");
   const [revealedEpisodes,setRevealedEpisodes]=useState<Record<string,boolean>>({});
   const [showAllActors, setShowAllActors] = useState(false);
   const [refreshingActors, setRefreshingActors] = useState(false);
@@ -2315,7 +2316,7 @@ export default function MediaDetailPage() {
                   <button
                     key={season.seasonNumber}
                     type="button"
-                    disabled={loadingSeason} aria-pressed={selectedSeasonNumber===season.seasonNumber} onClick={() => item.tmdbId && loadSeason(item.tmdbId, season.seasonNumber)}
+                    disabled={loadingSeason} aria-pressed={selectedSeasonNumber===season.seasonNumber} onClick={() => {setEpisodeFilter("ALL");if(item.tmdbId)void loadSeason(item.tmdbId, season.seasonNumber);}}
                     className={`min-h-20 min-w-28 flex-shrink-0 rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition disabled:opacity-60 ${
                       selectedSeasonNumber === season.seasonNumber
                         ? "border-[#183b35] bg-[#183b35] text-white shadow-md shadow-emerald-950/10 dark:border-emerald-300 dark:bg-emerald-300 dark:text-slate-950"
@@ -2328,7 +2329,16 @@ export default function MediaDetailPage() {
                 ))}
               </div>
 
-              {seasonDetails&&!loadingSeason&&<div className="my-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/60"><div className="flex items-center justify-between gap-3 text-xs"><span className="font-semibold">Sezon {selectedSeasonNumber} ilerlemen</span><span className="text-slate-500">{seasonDetails.episodes.filter(e=>watchedEpisodes[episodeKey(e.seasonNumber,e.episodeNumber)]).length} / {seasonDetails.episodes.length} bölüm</span></div><progress aria-label="Sezon izleme ilerlemesi" max={Math.max(1,seasonDetails.episodes.length)} value={seasonDetails.episodes.filter(e=>watchedEpisodes[episodeKey(e.seasonNumber,e.episodeNumber)]).length} className="mt-3 h-1.5 w-full accent-emerald-600"/></div>}
+              {seasonDetails&&!loadingSeason&&(()=>{
+                const episodes=seasonDetails.episodes;
+                const completed=episodes.filter(e=>watchedEpisodes[episodeKey(e.seasonNumber,e.episodeNumber)]).length;
+                const next=episodes.find(e=>!watchedEpisodes[episodeKey(e.seasonNumber,e.episodeNumber)]);
+                const percent=episodes.length?Math.round(completed/episodes.length*100):0;
+                return <div className="my-4 space-y-4"><div className="relative isolate overflow-hidden rounded-3xl bg-[#172b29] p-5 text-white sm:p-6">{item.backdropUrl&&<img src={item.backdropUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-10"/>}<div className="relative flex items-start justify-between gap-4"><div><p className="text-[9px] font-semibold uppercase tracking-[.23em] text-[#e9bc89]">SENİN SEZON YOLCULUĞUN</p><h3 className="mt-3 text-2xl font-semibold tracking-tight">{selectedSeasonNumber===0?'Özel bölümler':`${selectedSeasonNumber}. Sezon`}</h3><p className="mt-2 text-xs text-white/50">{completed} / {episodes.length} bölüm izlendi</p></div><span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-4 border-white/10 text-lg font-semibold text-[#e9bc89]">%{percent}</span></div><progress aria-label="Sezon izleme ilerlemesi" max={Math.max(1,episodes.length)} value={completed} className="relative mt-5 h-1.5 w-full accent-[#e9bc89]"/></div>
+                {next?<div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-200/60 bg-orange-50/50 p-4 dark:border-orange-900/40 dark:bg-orange-950/10"><div className="flex min-w-0 items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 dark:bg-orange-950"><Play size={17}/></span><div><p className="text-[9px] font-semibold uppercase tracking-widest text-orange-600 dark:text-orange-300">KALDIĞIN YER</p><p className="mt-1 text-sm font-semibold">Sezon {next.seasonNumber} · Bölüm {next.episodeNumber}</p><p className="mt-1 text-[11px] text-slate-500">Bu sezondaki ilk izlenmemiş bölümün</p></div></div><button type="button" onClick={()=>{setEpisodeFilter('UNWATCHED');requestAnimationFrame(()=>document.getElementById(`episode-${episodeKey(next.seasonNumber,next.episodeNumber)}`)?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'center'}));}} className="min-h-11 rounded-xl bg-orange-600 px-4 text-xs font-semibold text-white">Bölüme git</button></div>:episodes.length>0?<p className="flex items-center gap-2 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"><CheckCircle2 size={18}/>Bu sezonun tüm bölümlerini izledin.</p>:null}
+                <div className="flex gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-950">{([{key:'ALL',label:'Tümü',count:episodes.length},{key:'UNWATCHED',label:'İzlenmeyen',count:episodes.length-completed},{key:'WATCHED',label:'İzlenen',count:completed}] as const).map(filter=><button key={filter.key} type="button" aria-pressed={episodeFilter===filter.key} onClick={()=>setEpisodeFilter(filter.key)} className={`min-h-11 min-w-0 flex-1 rounded-xl px-2 text-[11px] font-semibold transition ${episodeFilter===filter.key?'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white':'text-slate-500'}`}>{filter.label}<span className="ml-1 opacity-50">{filter.count}</span></button>)}</div>
+                </div>;
+              })()}
               <details className="mb-5 mt-3"><summary className="min-h-11 cursor-pointer py-3 text-xs font-semibold text-slate-500">Toplu bölüm işlemleri</summary><div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -2364,14 +2374,15 @@ export default function MediaDetailPage() {
                 <PageLoading variant="episodes" label="Bölümler hazırlanıyor…" description="Seçtiğin sezonun bölüm bilgileri getiriliyor." />
               ) : seasonDetails ? (
                 <div className="mt-4 grid grid-cols-1 gap-3">
-                  {seasonDetails.episodes.map((episode) => {
+                  {!seasonDetails.episodes.some(e=>episodeFilter==='ALL'||(episodeFilter==='WATCHED')===Boolean(watchedEpisodes[episodeKey(e.seasonNumber,e.episodeNumber)]))&&<p className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500 dark:border-slate-700">Bu filtrede bölüm yok. Diğer filtreleri deneyebilirsin.</p>}
+                  {seasonDetails.episodes.filter(episode=>episodeFilter==='ALL'||(episodeFilter==='WATCHED')===Boolean(watchedEpisodes[episodeKey(episode.seasonNumber,episode.episodeNumber)])).map((episode) => {
                     const key = episodeKey(episode.seasonNumber, episode.episodeNumber);
                     const checked = Boolean(watchedEpisodes[key]);
 
                     return (
                       <article
-                        key={key}
-                        className={`group w-full overflow-hidden rounded-2xl border p-4 text-left transition duration-200 ${
+                        key={key} id={`episode-${key}`}
+                        className={`scroll-mt-28 group w-full overflow-hidden rounded-2xl border p-4 text-left transition duration-200 ${
                           checked
                             ? "border-emerald-200/80 bg-emerald-50/40 dark:border-emerald-900/70 dark:bg-emerald-950/15"
                             : "border-slate-200/80 bg-white hover:border-orange-200 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900"
