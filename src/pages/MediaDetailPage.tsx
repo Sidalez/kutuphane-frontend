@@ -1955,8 +1955,14 @@ export default function MediaDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6 pb-24">
       <ToastBar toast={toast} onClose={() => setToast(null)} />
+      <div className="pointer-events-none fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 flex justify-center md:inset-x-6 md:bottom-5">
+        <div className="pointer-events-auto flex w-full max-w-lg items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/95 p-3 shadow-[0_8px_40px_rgba(15,23,42,.18)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95">
+          <div className="min-w-0 flex-1 pl-1"><p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{item.title}</p><p className="mt-1 text-[10px] leading-4 text-slate-500 dark:text-slate-400">{item.type==='TV'?`${watchedEpisodeList.length} bölüm seçili · `:''}Değişikliklerini kaydet</p></div>
+          <button type="button" disabled={saving} onClick={()=>void handleSave()} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700 active:scale-[.98] disabled:opacity-60">{saving?<Loader2 size={17} className="animate-spin"/>:<Save size={17}/ >}{saving?'Kaydediliyor…':'Kaydet'}</button>
+        </div>
+      </div>
 
       {previewImage ? (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/90 p-3 backdrop-blur-md sm:p-6">
