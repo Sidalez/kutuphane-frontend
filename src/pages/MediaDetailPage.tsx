@@ -2515,7 +2515,7 @@ export default function MediaDetailPage() {
                     </div>
                     {action.details.length > 0 ? (
                       <ul className="mt-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
-                        {action.details.slice(0, 4).map((detail, detailIndex) => (
+                        {action.details.slice(0, 4).map((detail: string, detailIndex: number) => (
                           <li key={`${detail}-${detailIndex}`} className="flex gap-2">
                             <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-emerald-400" />
                             <span>{formatStoredActionText(detail, action.at)}</span>
@@ -2611,14 +2611,14 @@ export default function MediaDetailPage() {
                   </>
                 ) : item.cast && item.cast.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {item.cast.map((name: string) => (
+                    {item.cast.map((person) => {const name=typeof person==='string'?person:person.name;return (
                       <span
                         key={name}
                         className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
                       >
                         {name}
                       </span>
-                    ))}
+                    );})}
                   </div>
                 ) : (
                   <p className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm font-medium text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">

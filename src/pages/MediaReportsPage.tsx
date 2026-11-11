@@ -304,7 +304,8 @@ function getTvCompletionDate(item: MediaMeta | EnrichedLog) {
     return item.mediaCompletedAt || item.mediaWatchedAt || item.mediaLastActionAt || null;
   }
 
-  return item.completedAt || item.watchedAt || item.lastActionAt || null;
+  const media=item as MediaMeta;
+  return media.completedAt || media.watchedAt || media.lastActionAt || null;
 }
 
 function formatMinutes(minutes: number) {

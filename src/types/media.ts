@@ -77,6 +77,7 @@ export type MediaItem = {
   completedAt?: string;
   completedDate?: string;
   lastActionAt?: any;
+  lastWatchedAt?: any;
 
   createdAt?: any;
   updatedAt?: any;

@@ -452,7 +452,7 @@ export default function StatisticsPage() {
         if (!book) return null;
         return { book, ...agg };
       })
-      .filter(Boolean)
+      .filter((value): value is NonNullable<typeof value> => value !== null)
       .sort((a, b) => b.pages - a.pages) as {
       book: Book;
       pages: number;

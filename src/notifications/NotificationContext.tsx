@@ -9,7 +9,7 @@ export type NotificationPreferences = {
 };
 export type AppNotification = { id: string; sourceUrl?: string; kind: "trailer" | "upcoming" | "episode" | "season" | "reading" | "readingFollowUp" | "watching" | "test"; title: string; body: string; url: string; createdAt: number; read: boolean };
 type Config = { ready: boolean; pushReady: boolean; publicKey: string | null };
-type Inbox = { preferences: NotificationPreferences; items: AppNotification[]; checkedAt: number | null; deviceCount: number };
+type Inbox = { lastCheckAttemptAt?:number|null; lastCheckError?:string|null; preferences: NotificationPreferences; items: AppNotification[]; checkedAt: number | null; deviceCount: number };
 const defaults: NotificationPreferences = { enabled: false, trailers: true, upcoming: true, upcomingTime: "10:00", episodes: true, seasons: true, reading: false, readingFollowUp: true, watching: false, quietEnabled: true, quietStart: "22:00", quietEnd: "09:00", delivery: "instant", digestTime: "20:00", reminderTime: "20:30", timeZone: "Europe/Istanbul" };
 type ContextValue = Inbox & {
   config: Config | null; loading: boolean; busy: boolean; error: string; deviceEnabled: boolean;
@@ -37,10 +37,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       if (currentUid.current !== uid) return;
       setConfig(cfg);
       if (!cfg.ready) { setError(""); return; }
-      if (check) await notificationRequest("/check", {});
+      let checkError="";
+      if(check)try{await notificationRequest("/check",{});}catch(error){checkError=error instanceof Error?error.message:"Kontrol tamamlanamadı.";}
       const inbox = await notificationRequest<Inbox>("");
       if (currentUid.current !== uid) return;
-      setData(inbox); setError("");
+      setData(inbox); setError(checkError);
       if ("serviceWorker" in navigator && "PushManager" in window) {
         const reg = await navigator.serviceWorker.getRegistration();
         const sub = await reg?.pushManager.getSubscription();
